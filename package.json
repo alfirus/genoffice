@@ -39,9 +39,6 @@
   "dependencies": {
     "ws": "^8.21.1"
   },
-  "overrides": {
-    "@tiptap/core": "$@tiptap/core"
-  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
