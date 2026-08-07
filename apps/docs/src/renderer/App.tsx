@@ -2708,6 +2708,7 @@ export function App() {
             }}
             googleFileId={googleFileId}
             googleWritable={googleWritable}
+            displayTitle={googleTitleOverride ?? doc?.fileName?.replace(/\.docx$/i, '') ?? 'Untitled'}
             onTitleCommit={(title) => setGoogleTitleOverride(title)}
             onImportFromGoogle={() => setShowGoogleImport(true)}
             onSendToGoogle={() => void sendToGoogleWithToast()}

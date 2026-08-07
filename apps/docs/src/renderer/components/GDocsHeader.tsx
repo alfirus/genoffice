@@ -36,6 +36,8 @@ export interface GDocsHeaderExtraProps {
   onMoveGoogleFile: () => void
   /** true once the linked Google Doc is app-owned and can be renamed via Drive */
   googleWritable: boolean
+  /** the title to display — App owns it (user override ?? file name) */
+  displayTitle: string
   /** editable title committed (non-empty, changed). When the doc is linked +
    *  writable this also renames the Drive file; the title is always kept as
    *  the default name for the next Send/Copy regardless of link state. */
@@ -188,26 +190,20 @@ export function GDocsHeader(props: Props) {
     onOpenGoogleFolderSettings,
     onMakeGoogleCopy,
     onMoveGoogleFile,
+    displayTitle,
     onTitleCommit,
   } = props
 
-  const [title, setTitle] = useState(() => baseTitle(filePath))
-  const [editingTitle, setEditingTitle] = useState(false)
+  // The displayed title is CONTROLLED by App (displayTitle = user override ??
+  // file name) — this component holds only a draft while the field is being
+  // edited. Local always-on title state kept reverting: any filePath change
+  // (autosave assigning a name, save-as) re-synced over the user's text.
+  const [draftTitle, setDraftTitle] = useState<string | null>(null)
+  const editingTitle = draftTitle !== null
+  const title = draftTitle ?? displayTitle
+  const setTitle = setDraftTitle
+  const setEditingTitle = (on: boolean) => setDraftTitle(on ? displayTitle : null)
   const titleInputRef = useRef<HTMLInputElement>(null)
-
-  // Follow filePath changes (open / save-as / external rename) — but ONLY on a
-  // real path change. Keying on editingTitle too made this fire the moment the
-  // user left the field, instantly reverting whatever they had just typed.
-  const lastPathRef = useRef(filePath)
-  const lastCommittedTitleRef = useRef(title)
-  useEffect(() => {
-    if (filePath !== lastPathRef.current) {
-      lastPathRef.current = filePath
-      const next = baseTitle(filePath)
-      setTitle(next)
-      lastCommittedTitleRef.current = next
-    }
-  }, [filePath])
 
   useEffect(() => {
     if (editingTitle) titleInputRef.current?.select()
@@ -219,14 +215,9 @@ export function GDocsHeader(props: Props) {
   // rename the Drive file. Either way it becomes the default name for the
   // next Send to Google Docs / Make a copy.
   const commitTitle = () => {
-    setEditingTitle(false)
-    const trimmed = title.trim()
-    if (trimmed === '') {
-      setTitle(baseTitle(filePath))
-      return
-    }
-    if (trimmed === lastCommittedTitleRef.current) return // unchanged, nothing to persist
-    lastCommittedTitleRef.current = trimmed
+    const trimmed = (draftTitle ?? '').trim()
+    setDraftTitle(null)
+    if (trimmed === '' || trimmed === displayTitle) return // empty or unchanged
     onTitleCommit(trimmed)
     if (googleFileId && googleWritable) {
       void window.desktop.googleRenameFile(googleFileId, trimmed).then((result) => {
@@ -379,10 +370,7 @@ export function GDocsHeader(props: Props) {
                 onBlur={commitTitle}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                  if (e.key === 'Escape') {
-                    setTitle(baseTitle(filePath))
-                    setEditingTitle(false)
-                  }
+                  if (e.key === 'Escape') setDraftTitle(null) // cancel edit, keep current title
                 }}
               />
             ) : (
