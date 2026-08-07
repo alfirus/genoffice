@@ -31,6 +31,7 @@
     "@genoffice/sheets": "*",
     "@genoffice/slides": "*",
     "@types/react": "^19.2.14",
+    "word-extractor": "^1.0.4",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.4",
     "electron": "^43.3.0",
