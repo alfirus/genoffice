@@ -1,6 +1,6 @@
-import { memo, useCallback } from 'react'
+import { memo } from 'react'
 import type { Editor } from '@tiptap/react'
-import { useI18n } from '../i18n/locale'
+
 import type { MarkdownMenuCommand } from '../../shared/ipc'
 
 interface RibbonProps {
@@ -11,20 +11,11 @@ interface RibbonProps {
   zoom: number
 }
 
+function isActive(editor: Editor, name: string, attrs?: Record<string, unknown>): boolean {
+  return editor.isActive(name, attrs)
+}
+
 export const Ribbon = memo(function Ribbon({ editor, activeTab, onTabChange, zoom }: RibbonProps) {
-  const { t } = useI18n()
-
-  const cmd = useCallback(
-    (command: MarkdownMenuCommand) => () => {
-      // Dispatch via the same menu:command mechanism as the native menu
-      const event = new CustomEvent('ribbon-command', { detail: command })
-      window.dispatchEvent(event)
-    },
-    [],
-  )
-
-  const isActive = (name: string, attrs?: Record<string, unknown>) => editor.isActive(name, attrs)
-
   return (
     <div className="ribbon">
       <div className="ribbon-tabs">
@@ -57,10 +48,6 @@ function FormatBtn({ editor, mark, label }: { editor: Editor; mark: string; labe
       {label.charAt(0)}
     </button>
   )
-}
-
-function isActive(editor: Editor, name: string, attrs?: Record<string, unknown>): boolean {
-  return editor.isActive(name, attrs)
 }
 
 function HeadingBtn({ editor, level, label }: { editor: Editor; level: 1 | 2 | 3; label: string }) {
@@ -130,7 +117,7 @@ function HomeTab({ editor }: { editor: Editor }) {
         </button>
         <button
           className="ribbon-btn"
-          // @ts-ignore — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module type mismatch in workspace monorepo
           onClick={() => editor.commands.setHorizontalRule()}
           title="Horizontal Rule"
         >
@@ -142,7 +129,7 @@ function HomeTab({ editor }: { editor: Editor }) {
           className={`ribbon-btn ${isActive(editor, 'link') ? 'active' : ''}`}
           onClick={() => {
             const url = window.prompt('Enter URL:')
-            // @ts-ignore — TipTap duplicate module type mismatch
+            // @ts-expect-error TipTap duplicate module type mismatch in workspace monorepo
             if (url) editor.commands.setLink({ href: url })
           }}
           title="Link"
@@ -153,7 +140,7 @@ function HomeTab({ editor }: { editor: Editor }) {
       <div className="ribbon-group">
         <button
           className={`ribbon-btn ${editor.isActive({ textAlign: 'left' }) ? 'active' : ''}`}
-          // @ts-ignore — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module type mismatch in workspace monorepo
           onClick={() => editor.commands.setTextAlign('left')}
           title="Align Left"
         >
@@ -161,7 +148,7 @@ function HomeTab({ editor }: { editor: Editor }) {
         </button>
         <button
           className={`ribbon-btn ${editor.isActive({ textAlign: 'center' }) ? 'active' : ''}`}
-          // @ts-ignore — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module type mismatch in workspace monorepo
           onClick={() => editor.commands.setTextAlign('center')}
           title="Align Center"
         >
@@ -169,7 +156,7 @@ function HomeTab({ editor }: { editor: Editor }) {
         </button>
         <button
           className={`ribbon-btn ${editor.isActive({ textAlign: 'right' }) ? 'active' : ''}`}
-          // @ts-ignore — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module type mismatch in workspace monorepo
           onClick={() => editor.commands.setTextAlign('right')}
           title="Align Right"
         >
@@ -188,7 +175,7 @@ function InsertTab({ editor }: { editor: Editor }) {
           className="ribbon-btn ribbon-btn-wide"
           onClick={() => {
             const url = window.prompt('Enter image URL:')
-            // @ts-ignore — TipTap duplicate module type mismatch
+            // @ts-expect-error TipTap duplicate module type mismatch in workspace monorepo
             if (url) editor.commands.setImage({ src: url })
           }}
         >
@@ -198,7 +185,7 @@ function InsertTab({ editor }: { editor: Editor }) {
           className="ribbon-btn ribbon-btn-wide"
           onClick={() => {
             const url = window.prompt('Enter URL:')
-            // @ts-ignore — TipTap duplicate module type mismatch
+            // @ts-expect-error TipTap duplicate module type mismatch in workspace monorepo
             if (url) editor.commands.setLink({ href: url })
           }}
         >
@@ -208,14 +195,14 @@ function InsertTab({ editor }: { editor: Editor }) {
       <div className="ribbon-group">
         <button
           className="ribbon-btn ribbon-btn-wide"
-          // @ts-ignore — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module type mismatch in workspace monorepo
           onClick={() => editor.commands.setHorizontalRule()}
         >
           HR
         </button>
         <button
           className="ribbon-btn ribbon-btn-wide"
-          // @ts-ignore — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module type mismatch in workspace monorepo
           onClick={() => editor.commands.insertTable({ rows: 3, cols: 3, withHeaderRow: true })}
         >
           Table

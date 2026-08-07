@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import type { AnyExtension } from '@tiptap/core'
 import { markdownExtensions } from './editor/extensions'
@@ -20,7 +20,7 @@ function EditorApp() {
   const frontmatterRef = useRef<Record<string, unknown> | null>(null)
 
   const editor = useEditor({
-    // @ts-ignore — TipTap duplicate module issue in npm workspace monorepo
+    // @ts-expect-error TipTap duplicate module type mismatch — TipTap duplicate module issue in npm workspace monorepo
     extensions: markdownExtensions as AnyExtension[],
     content: { type: 'doc', content: [{ type: 'paragraph' }] },
     editorProps: {
@@ -54,7 +54,7 @@ function EditorApp() {
     async (result: OpenFileResult) => {
       if (!editor) return
       const text = new TextDecoder().decode(result.data)
-      // @ts-ignore — TipTap duplicate module type mismatch in workspace monorepo
+      // @ts-expect-error TipTap duplicate module type mismatch — TipTap duplicate module type mismatch in workspace monorepo
       const json = markdownToProseMirror(text, markdownExtensions)
       // Extract frontmatter
       const fmNode = json.content?.find((n) => n.type === 'frontmatter')
@@ -175,11 +175,11 @@ function EditorApp() {
           break
         // Edit
         case 'undo':
-          // @ts-ignore — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module type mismatch — TipTap duplicate module type mismatch
           editor.commands.undo()
           break
         case 'redo':
-          // @ts-ignore
+          // @ts-expect-error TipTap duplicate module type mismatch
           editor.commands.redo()
           break
         case 'find':
@@ -245,27 +245,27 @@ function EditorApp() {
           editor.chain().focus().toggleNode('codeBlock', 'paragraph').run()
           break
         case 'horizontal-rule':
-          // @ts-ignore — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module type mismatch — TipTap duplicate module type mismatch
           editor.commands.setHorizontalRule()
           break
         case 'insert-table':
-          // @ts-ignore
+          // @ts-expect-error TipTap duplicate module type mismatch
           editor.commands.insertTable({ rows: 3, cols: 3, withHeaderRow: true })
           break
         case 'align-left':
-          // @ts-ignore
+          // @ts-expect-error TipTap duplicate module type mismatch
           editor.commands.setTextAlign('left')
           break
         case 'align-center':
-          // @ts-ignore
+          // @ts-expect-error TipTap duplicate module type mismatch
           editor.commands.setTextAlign('center')
           break
         case 'align-right':
-          // @ts-ignore
+          // @ts-expect-error TipTap duplicate module type mismatch
           editor.commands.setTextAlign('right')
           break
         case 'align-justify':
-          // @ts-ignore
+          // @ts-expect-error TipTap duplicate module type mismatch
           editor.commands.setTextAlign('justify')
           break
         case 'print':
@@ -306,7 +306,7 @@ function EditorApp() {
         editor={editor}
         activeTab={ribbonTab}
         onTabChange={setRibbonTab}
-        onCommand={(cmd) => window.markdownApi.onMenuCommand}
+        onCommand={() => window.markdownApi.onMenuCommand}
         zoom={zoom}
       />
       <div className="app-main">

@@ -130,7 +130,6 @@ import {
 import {
   configureMarkdownRuntime,
   buildMarkdownMenu,
-  markdownIsDirty,
   requestMarkdownClose,
 } from '../../../markdown/src/main/markdown-main'
 import type {

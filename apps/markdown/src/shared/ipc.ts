@@ -6,12 +6,7 @@ import type {
   AiStreamRequest,
   GenSparkAccountStatus,
 } from '@genoffice/ai-provider'
-import type {
-  AgentMessage,
-  AgentToolCall,
-  AgentToolDef,
-  AgentToolResult,
-} from '@genoffice/agent-core'
+import type { AgentMessage } from '@genoffice/agent-core'
 
 export type MarkdownMenuCommand =
   | 'new'

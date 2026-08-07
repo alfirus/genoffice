@@ -175,7 +175,7 @@ describe('prosemirrorToMarkdown', () => {
 describe('markdownToProseMirror', () => {
   it('parses markdown to ProseMirror JSON with headings', () => {
     const input = '# Hello\n\nWorld'
-    // @ts-ignore — TipTap duplicate module type mismatch in workspace monorepo
+    // @ts-expect-error — TipTap duplicate module type mismatch in workspace monorepo
     const json = markdownToProseMirror(input, markdownExtensions)
     expect(json.type).toBe('doc')
     expect(json.content).toBeDefined()
@@ -187,7 +187,7 @@ describe('markdownToProseMirror', () => {
 
   it('parses markdown with frontmatter', () => {
     const input = '---\ntitle: Test\n---\n\n# Content'
-    // @ts-ignore — TipTap duplicate module type mismatch in workspace monorepo
+    // @ts-expect-error — TipTap duplicate module type mismatch in workspace monorepo
     const json = markdownToProseMirror(input, markdownExtensions)
     const fmNode = json.content?.find((n) => n.type === 'frontmatter')
     expect(fmNode).toBeDefined()
