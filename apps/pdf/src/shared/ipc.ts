@@ -183,6 +183,10 @@ export interface PdfApi {
   onSaveAsFlow(handler: (inFlight: boolean) => void): () => void
   getLanguage(): Promise<Lang>
   onLanguageChanged(handler: (lang: Lang) => void): () => void
+  /** current theme setting from the shell */
+  getTheme(): Promise<'light' | 'dark' | 'system'>
+  /** theme changed from the shell home page */
+  onThemeChanged(handler: (theme: string) => void): () => void
   getAiSettings(): Promise<AiSettings>
   aiStream(request: AiStreamRequest): Promise<void>
   aiStreamCancel(requestId: string): Promise<void>

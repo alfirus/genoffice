@@ -1904,6 +1904,10 @@ export interface DesktopApi {
       lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
     ) => void,
   ): () => void
+  /** current theme setting from the shell */
+  getTheme(): Promise<'light' | 'dark' | 'system'>
+  /** theme changed from the shell home page */
+  onThemeChanged(handler: (theme: string) => void): () => void
   selectWorkbook(): Promise<WorkbookFile | null>
   readWorkbookRange(request: WorkbookRangeRequest): Promise<WorkbookRangeResult>
   readWorkbookFormulas(request: WorkbookFormulaCellsRequest): Promise<WorkbookFormulaCellsResult>

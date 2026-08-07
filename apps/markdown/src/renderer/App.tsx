@@ -58,6 +58,24 @@ function EditorApp() {
 
   // ── Theme ───────────────────────────────────────────────────────────────
 
+  // Read initial theme from shell
+  useEffect(() => {
+    void window.markdownApi.getTheme().then((theme) => {
+      if (theme === 'dark' || theme === 'light') {
+        setDarkMode(theme === 'dark')
+      }
+    })
+  }, [])
+
+  // Listen for theme changes from shell
+  useEffect(() => {
+    return window.markdownApi.onThemeChanged((theme) => {
+      if (theme === 'dark' || theme === 'light') {
+        setDarkMode(theme === 'dark')
+      }
+    })
+  }, [])
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
   }, [darkMode])

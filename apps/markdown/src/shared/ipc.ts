@@ -81,6 +81,8 @@ export interface DesktopApi {
   reportCloseSaveResult(ok: boolean): void
   onTeardown(handler: () => void): () => void
   onLanguageChanged(handler: (lang: string) => void): () => void
+  getTheme(): Promise<'light' | 'dark' | 'system'>
+  onThemeChanged(handler: (theme: string) => void): () => void
   onDirtyChanged(dirty: boolean): void
   winNew(): void
   winList(): Promise<MarkdownTabInfo[]>

@@ -20,6 +20,12 @@ const api: DesktopApi = {
     ipcRenderer.on('app:language-changed', listener)
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },
+  getTheme: () => ipcRenderer.invoke('home:get-theme'),
+  onThemeChanged: (handler) => {
+    const listener = (_e: IpcRendererEvent, theme: string) => handler(theme)
+    ipcRenderer.on('app:theme-changed', listener)
+    return () => ipcRenderer.removeListener('app:theme-changed', listener)
+  },
   openDocx: () => ipcRenderer.invoke('docs:open'),
   openDocxPath: (path: string) => ipcRenderer.invoke('docs:open-path', path),
   consumePendingOpenDocx: () => ipcRenderer.invoke('docs:consume-pending-open'),

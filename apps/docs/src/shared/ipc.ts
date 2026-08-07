@@ -140,6 +140,10 @@ export interface DesktopApi {
       lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
     ) => void,
   ): () => void
+  /** current theme setting from the shell */
+  getTheme(): Promise<'light' | 'dark' | 'system'>
+  /** theme changed from the shell home page */
+  onThemeChanged(handler: (theme: string) => void): () => void
   openDocx(): Promise<OpenFileResult | null>
   openDocxPath(path: string): Promise<OpenFileResult | null>
   /** mark the renderer ready and consume a file passed by Finder/Explorer at launch */

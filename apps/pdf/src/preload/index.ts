@@ -35,6 +35,12 @@ const api: PdfApi = {
     ipcRenderer.on(PDF_CHANNELS.languageChanged, listener)
     return () => ipcRenderer.removeListener(PDF_CHANNELS.languageChanged, listener)
   },
+  getTheme: () => ipcRenderer.invoke('home:get-theme'),
+  onThemeChanged: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, theme: string) => handler(theme)
+    ipcRenderer.on('app:theme-changed', listener)
+    return () => ipcRenderer.removeListener('app:theme-changed', listener)
+  },
   getAiSettings: () => ipcRenderer.invoke(AI_CHANNELS.getSettings),
   aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
   aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),

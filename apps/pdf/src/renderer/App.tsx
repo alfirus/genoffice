@@ -736,6 +736,22 @@ export default function App() {
   const [aiCollapsed, setAiCollapsed] = useState(false)
   const [spread, setSpread] = useState<1 | 2>(1)
   const [nightMode, setNightMode] = useState(false)
+
+  useEffect(() => {
+    void window.pdfApi.getTheme().then((theme) => {
+      if (theme !== 'system') setNightMode(theme === 'dark')
+    })
+  }, [])
+
+  useEffect(() => {
+    return window.pdfApi.onThemeChanged((theme) => {
+      if (theme !== 'system') setNightMode(theme === 'dark')
+    })
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', nightMode ? 'dark' : 'light')
+  }, [nightMode])
   const [outline, setOutline] = useState<OutlineNode[] | null>(null)
   const [markups, setMarkups] = useState<LocalMarkup[]>([])
   const [drawings, setDrawings] = useState<LocalDrawing[]>([])

@@ -600,7 +600,20 @@ export function App() {
   useEffect(() => {
     void window.desktop.getRecentFiles().then(setRecent)
     void window.desktop.getAiSettings().then(setSettings)
+    void window.desktop.getTheme().then((theme) => {
+      if (theme !== 'system') setDarkCanvas(theme === 'dark')
+    })
   }, [])
+
+  useEffect(() => {
+    return window.desktop.onThemeChanged((theme) => {
+      if (theme !== 'system') setDarkCanvas(theme === 'dark')
+    })
+  }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', darkCanvas ? 'dark' : 'light')
+  }, [darkCanvas])
 
   useEffect(() => {
     localStorage.setItem('aidocs.showAi', showAi ? '1' : '0')

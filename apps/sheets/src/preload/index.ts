@@ -46,6 +46,12 @@ const desktopApi: DesktopApi = {
     ipcRenderer.on('app:language-changed', listener)
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },
+  getTheme: () => ipcRenderer.invoke('home:get-theme'),
+  onThemeChanged(handler) {
+    const listener = (_event: Electron.IpcRendererEvent, theme: string) => handler(theme)
+    ipcRenderer.on('app:theme-changed', listener)
+    return () => ipcRenderer.removeListener('app:theme-changed', listener)
+  },
   async selectWorkbook() {
     const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.selectWorkbook)
     return result === null ? null : parseWorkbookFile(result)
