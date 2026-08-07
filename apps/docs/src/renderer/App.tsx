@@ -2751,7 +2751,7 @@ export function App() {
         <GoogleSharePopover
           fileId={googleWritable ? googleFileId : null}
           webViewLink={googleWebViewLink}
-          docName={doc?.fileName?.replace(/\.docx$/i, '') ?? 'Untitled document'}
+          docName={googleTitleOverride ?? doc?.fileName?.replace(/\.docx$/i, '') ?? 'Untitled document'}
           onClose={() => setShowGoogleShare(false)}
           onSaveToGoogleFirst={async () => {
             await sendToGoogle()
