@@ -12,7 +12,6 @@ import type {
   ProjectSummaryEntry,
   TimelineEntryItem,
   UiLanguage,
-  UiTheme,
 } from '../shared/home-api'
 import { HOME_CHANNELS, PROJECT_CHANNELS } from '../shared/home-api'
 import type { TabsApi, TabSummary } from '../shared/tabs-api'
