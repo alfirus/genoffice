@@ -106,13 +106,15 @@ test.describe('markdown editor', () => {
 
       await editor.click()
       await editorPage.keyboard.type('Hello World')
+
+      // Select "World" (last 5 chars)
       await editorPage.keyboard.down('Shift')
       for (let i = 0; i < 5; i++) await editorPage.keyboard.press('ArrowLeft')
       await editorPage.keyboard.up('Shift')
 
       const boldBtn = editorPage.locator('.ribbon-btn', { hasText: 'B' }).first()
       await boldBtn.click()
-      await expect(editor.locator('strong')).toHaveText('Hello')
+      await expect(editor.locator('strong')).toHaveText('World')
       await editorPage.screenshot({ path: screenshotPath('markdown-ribbon-bold') })
     } finally {
       await closeAndSaveVideo(launched, 'markdown-ribbon')

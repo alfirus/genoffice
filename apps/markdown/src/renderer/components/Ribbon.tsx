@@ -9,13 +9,20 @@ interface RibbonProps {
   onTabChange: (tab: 'home' | 'insert' | 'view') => void
   onCommand: (cmd: MarkdownMenuCommand) => void
   zoom: number
+  onToggleDark?: () => void
 }
 
 function isActive(editor: Editor, name: string, attrs?: Record<string, unknown>): boolean {
   return editor.isActive(name, attrs)
 }
 
-export const Ribbon = memo(function Ribbon({ editor, activeTab, onTabChange, zoom }: RibbonProps) {
+export const Ribbon = memo(function Ribbon({
+  editor,
+  activeTab,
+  onTabChange,
+  zoom,
+  onToggleDark,
+}: RibbonProps) {
   return (
     <div className="ribbon">
       <div className="ribbon-tabs">
@@ -32,7 +39,7 @@ export const Ribbon = memo(function Ribbon({ editor, activeTab, onTabChange, zoo
       <div className="ribbon-content">
         {activeTab === 'home' && <HomeTab editor={editor} />}
         {activeTab === 'insert' && <InsertTab editor={editor} />}
-        {activeTab === 'view' && <ViewTab zoom={zoom} />}
+        {activeTab === 'view' && <ViewTab zoom={zoom} onToggleDark={onToggleDark} />}
       </div>
     </div>
   )
@@ -226,7 +233,7 @@ function InsertTab({ editor }: { editor: Editor }) {
   )
 }
 
-function ViewTab({ zoom }: { zoom: number }) {
+function ViewTab({ zoom, onToggleDark }: { zoom: number; onToggleDark?: () => void }) {
   return (
     <>
       <div className="ribbon-group">
@@ -234,6 +241,13 @@ function ViewTab({ zoom }: { zoom: number }) {
           Zoom: {zoom}%
         </span>
       </div>
+      {onToggleDark && (
+        <div className="ribbon-group">
+          <button className="ribbon-btn ribbon-btn-wide" onClick={onToggleDark}>
+            Dark Mode
+          </button>
+        </div>
+      )}
     </>
   )
 }

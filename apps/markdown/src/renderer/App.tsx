@@ -308,6 +308,7 @@ function EditorApp() {
         onTabChange={setRibbonTab}
         onCommand={() => window.markdownApi.onMenuCommand}
         zoom={zoom}
+        onToggleDark={() => setDarkMode((v) => !v)}
       />
       <div className="app-main">
         <div className="editor-container">

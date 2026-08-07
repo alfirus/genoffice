@@ -215,7 +215,10 @@ function readMarkdownFile(filePath: string): OpenFileResult | null {
     const data = readFileSync(filePath)
     const hash = createHash('sha256').update(data).digest('hex')
     const name = filePath.split('/').pop() ?? filePath
-    return { path: filePath, name, data: data.buffer as ArrayBuffer, hash }
+    const ab = new ArrayBuffer(data.length)
+    const view = new Uint8Array(ab)
+    view.set(data)
+    return { path: filePath, name, data: ab, hash }
   } catch {
     return null
   }
