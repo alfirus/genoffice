@@ -78,12 +78,22 @@ function SlideIcon() {
   )
 }
 
+function MarkdownIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+      <rect width="240" height="240" rx="48" fill="#2563EB" />
+      <text x="120" y="155" textAnchor="middle" fontSize="120" fontWeight="700" fill="#fff" fontFamily="sans-serif">M</text>
+    </svg>
+  )
+}
+
 const KIND_ICON: Record<TabSummary['kind'], ReactElement> = {
   home: <HomeIcon />,
   docs: <DocIcon />,
   sheets: <SheetIcon />,
   slides: <SlideIcon />,
   pdf: <PdfIcon />,
+  markdown: <MarkdownIcon />,
 }
 
 export function TabBar() {

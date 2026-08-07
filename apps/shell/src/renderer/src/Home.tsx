@@ -5,6 +5,7 @@ import iconDocx from './assets/file-docx.svg'
 import iconXlsx from './assets/file-xlsx.svg'
 import iconPptx from './assets/file-pptx.svg'
 import iconPdf from './assets/file-pdf.svg'
+import iconMd from './assets/file-md.svg'
 import type {
   AccountStatus,
   CloudProjectKind,
@@ -43,6 +44,7 @@ const FILE_ICONS: Record<string, string> = {
   xlsx: iconXlsx,
   pptx: iconPptx,
   pdf: iconPdf,
+  md: iconMd,
 }
 
 function FileBadge({ ext, size }: { ext: string; size: number }) {
@@ -113,6 +115,7 @@ const FILTERS: { key: string; label: StringKey }[] = [
   { key: 'xlsx', label: 'filterSheets' },
   { key: 'pptx', label: 'filterSlides' },
   { key: 'pdf', label: 'filterPdf' },
+  { key: 'md', label: 'filterMarkdown' },
 ]
 
 // ── Project sidebar component ────────────────────────────
@@ -1823,10 +1826,15 @@ export function Home() {
     void window.aiOffice.newSlide(selectedProjectId ? { projectId: selectedProjectId } : undefined)
   }
 
+  const handleNewMarkdown = () => {
+    void window.aiOffice.newMarkdown(selectedProjectId ? { projectId: selectedProjectId } : undefined)
+  }
+
   const NEW_ITEMS = [
     { ext: 'docx', title: t('newDoc'), sub: '.docx', action: handleNewDoc },
     { ext: 'xlsx', title: t('newSheet'), sub: '.xlsx', action: handleNewSheet },
     { ext: 'pptx', title: t('newSlide'), sub: '.pptx', action: handleNewSlide },
+    { ext: 'md', title: t('newMarkdown'), sub: '.md', action: handleNewMarkdown },
   ]
 
   function renderQuickCards() {
