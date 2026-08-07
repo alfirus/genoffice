@@ -1,13 +1,10 @@
 import { memo } from 'react'
 import type { Editor } from '@tiptap/react'
 
-import type { MarkdownMenuCommand } from '../../shared/ipc'
-
 interface RibbonProps {
   editor: Editor
   activeTab: 'home' | 'insert' | 'view'
   onTabChange: (tab: 'home' | 'insert' | 'view') => void
-  onCommand: (cmd: MarkdownMenuCommand) => void
   zoom: number
   onToggleDark?: () => void
 }

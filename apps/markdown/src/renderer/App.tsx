@@ -18,9 +18,20 @@ function EditorApp() {
   const [ribbonTab, setRibbonTab] = useState<'home' | 'insert' | 'view'>('home')
   const [wordCount, setWordCount] = useState({ words: 0, chars: 0 })
   const frontmatterRef = useRef<Record<string, unknown> | null>(null)
+  const dirtyRef = useRef(false)
+  const wordCountRef = useRef(wordCount)
+  const wordCountTimerRef = useRef<number | undefined>(undefined)
+
+  useEffect(() => {
+    dirtyRef.current = dirty
+  }, [dirty])
+
+  useEffect(() => {
+    wordCountRef.current = wordCount
+  }, [wordCount])
 
   const editor = useEditor({
-    // @ts-expect-error TipTap duplicate module type mismatch — TipTap duplicate module issue in npm workspace monorepo
+    // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
     extensions: markdownExtensions as AnyExtension[],
     content: { type: 'doc', content: [{ type: 'paragraph' }] },
     editorProps: {
@@ -28,18 +39,21 @@ function EditorApp() {
     },
     onUpdate: () => {
       setDirty(true)
-      updateWordCount()
+      debouncedWordCount()
     },
   })
 
-  // ── Word count ──────────────────────────────────────────────────────────
+  // ── Word count (debounced) ──────────────────────────────────────────────
 
-  const updateWordCount = useCallback(() => {
-    if (!editor) return
-    const text = editor.getText()
-    const words = text.trim() ? text.trim().split(/\s+/).length : 0
-    const chars = text.length
-    setWordCount({ words, chars })
+  const debouncedWordCount = useCallback(() => {
+    clearTimeout(wordCountTimerRef.current)
+    wordCountTimerRef.current = window.setTimeout(() => {
+      if (!editor) return
+      const text = editor.getText()
+      const words = text.trim() ? text.trim().split(/\s+/).length : 0
+      const chars = text.length
+      setWordCount({ words, chars })
+    }, 300)
   }, [editor])
 
   // ── Theme ───────────────────────────────────────────────────────────────
@@ -54,25 +68,23 @@ function EditorApp() {
     async (result: OpenFileResult) => {
       if (!editor) return
       const text = new TextDecoder().decode(result.data)
-      // @ts-expect-error TipTap duplicate module type mismatch — TipTap duplicate module type mismatch in workspace monorepo
+      // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
       const json = markdownToProseMirror(text, markdownExtensions)
-      // Extract frontmatter
       const fmNode = json.content?.find((n) => n.type === 'frontmatter')
       frontmatterRef.current = (fmNode?.attrs?.data as Record<string, unknown>) ?? null
       editor.commands.setContent(json)
       setFilePath(result.path)
       setFileName(result.name)
       setDirty(false)
-      updateWordCount()
+      debouncedWordCount()
     },
-    [editor, updateWordCount],
+    [editor, debouncedWordCount],
   )
 
   const saveFile = useCallback(
     async (saveAs = false): Promise<boolean> => {
       if (!editor) return false
       const json = editor.getJSON()
-      // Inject frontmatter if present
       if (frontmatterRef.current && Object.keys(frontmatterRef.current).length > 0) {
         const fmNode = json.content?.find((n) => n.type === 'frontmatter')
         if (fmNode) {
@@ -107,27 +119,30 @@ function EditorApp() {
   useEffect(() => {
     void (async () => {
       const pending = await window.markdownApi.consumePendingOpen()
-      if (pending) {
-        await loadFile(pending)
-      }
+      if (pending) await loadFile(pending)
     })()
   }, [loadFile])
 
-  // ── Close guard ─────────────────────────────────────────────────────────
+  // ── Close guard (uses ref to avoid re-registration on every dirty change)
+
+  const saveFileRef = useRef(saveFile)
+  useEffect(() => {
+    saveFileRef.current = saveFile
+  }, [saveFile])
 
   useEffect(() => {
     const unsubCheck = window.markdownApi.onCloseCheck(() => {
-      window.markdownApi.reportCloseCheckResult({ dirty })
+      window.markdownApi.reportCloseCheckResult({ dirty: dirtyRef.current })
     })
     const unsubSave = window.markdownApi.onCloseSaveRequest(async () => {
-      const ok = await saveFile()
+      const ok = await saveFileRef.current()
       window.markdownApi.reportCloseSaveResult(ok)
     })
     return () => {
       unsubCheck()
       unsubSave()
     }
-  }, [dirty, saveFile])
+  }, [])
 
   // ── Dirty tracking ──────────────────────────────────────────────────────
 
@@ -151,13 +166,11 @@ function EditorApp() {
       switch (command) {
         // File
         case 'new':
-          void (async () => {
-            editor.commands.clearContent()
-            setFilePath(null)
-            setFileName(t('untitled'))
-            setDirty(false)
-            frontmatterRef.current = null
-          })()
+          editor.commands.clearContent()
+          setFilePath(null)
+          setFileName(t('untitled'))
+          setDirty(false)
+          frontmatterRef.current = null
           break
         case 'open':
           void (async () => {
@@ -175,19 +188,20 @@ function EditorApp() {
           break
         // Edit
         case 'undo':
-          // @ts-expect-error TipTap duplicate module type mismatch — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
           editor.commands.undo()
           break
         case 'redo':
-          // @ts-expect-error TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
           editor.commands.redo()
           break
         case 'find':
-          // TODO: find panel
           break
-        case 'word-count':
-          alert(`${wordCount.words} words, ${wordCount.chars} characters`)
+        case 'word-count': {
+          const wc = wordCountRef.current
+          alert(`${wc.words} words, ${wc.chars} characters`)
           break
+        }
         // View
         case 'zoom-in':
           setZoom((z) => Math.min(200, z + 10))
@@ -245,27 +259,39 @@ function EditorApp() {
           editor.chain().focus().toggleNode('codeBlock', 'paragraph').run()
           break
         case 'horizontal-rule':
-          // @ts-expect-error TipTap duplicate module type mismatch — TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
           editor.commands.setHorizontalRule()
           break
         case 'insert-table':
-          // @ts-expect-error TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
           editor.commands.insertTable({ rows: 3, cols: 3, withHeaderRow: true })
           break
+        case 'insert-link': {
+          const url = window.prompt('Enter URL:')
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
+          if (url) editor.commands.setLink({ href: url })
+          break
+        }
+        case 'insert-image': {
+          const url = window.prompt('Enter image URL:')
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
+          if (url) editor.commands.setImage({ src: url })
+          break
+        }
         case 'align-left':
-          // @ts-expect-error TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
           editor.commands.setTextAlign('left')
           break
         case 'align-center':
-          // @ts-expect-error TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
           editor.commands.setTextAlign('center')
           break
         case 'align-right':
-          // @ts-expect-error TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
           editor.commands.setTextAlign('right')
           break
         case 'align-justify':
-          // @ts-expect-error TipTap duplicate module type mismatch
+          // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
           editor.commands.setTextAlign('justify')
           break
         case 'print':
@@ -276,7 +302,7 @@ function EditorApp() {
           break
       }
     })
-  }, [editor, loadFile, saveFile, t, wordCount])
+  }, [editor, loadFile, saveFile, t])
 
   // ── Keyboard shortcuts ──────────────────────────────────────────────────
 
@@ -294,8 +320,7 @@ function EditorApp() {
   // ── Title ───────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    const title = `${dirty ? '* ' : ''}${fileName} — GenOffice Markdown`
-    document.title = title
+    document.title = `${dirty ? '* ' : ''}${fileName} — GenOffice Markdown`
   }, [fileName, dirty])
 
   if (!editor) return null
@@ -306,7 +331,6 @@ function EditorApp() {
         editor={editor}
         activeTab={ribbonTab}
         onTabChange={setRibbonTab}
-        onCommand={() => window.markdownApi.onMenuCommand}
         zoom={zoom}
         onToggleDark={() => setDarkMode((v) => !v)}
       />

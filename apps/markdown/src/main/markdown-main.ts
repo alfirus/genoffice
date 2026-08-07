@@ -352,7 +352,6 @@ export function createMarkdownView(openPath?: string): WebContentsView {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      backgroundThrottling: false,
     },
   })
 

@@ -180,7 +180,24 @@ function serializeInline(content: JSONContent[]): string {
     if (node.type === 'text') {
       let text = (node.text as string) ?? ''
       const marks = node.marks ?? []
-      for (const mark of marks) {
+      // Sort marks for consistent output: bold → italic → strike → code → highlight → link
+      const MARK_ORDER = {
+        bold: 0,
+        strong: 0,
+        italic: 1,
+        em: 1,
+        strike: 2,
+        code: 3,
+        highlight: 4,
+        link: 5,
+      }
+      const sorted = [...marks].sort(
+        (a, b) =>
+          (MARK_ORDER[a.type as keyof typeof MARK_ORDER] ?? 99) -
+          (MARK_ORDER[b.type as keyof typeof MARK_ORDER] ?? 99),
+      )
+      // Apply inline marks (bold, italic, strike, code, highlight) first
+      for (const mark of sorted) {
         switch (mark.type) {
           case 'bold':
           case 'strong':
@@ -196,13 +213,15 @@ function serializeInline(content: JSONContent[]): string {
           case 'code':
             text = `\`${text}\``
             break
-          case 'link':
-            text = `[${text}](${mark.attrs?.href ?? ''})`
-            break
           case 'highlight':
             text = `==${text}==`
             break
         }
+      }
+      // Apply link last (wraps differently)
+      const linkMark = sorted.find((m) => m.type === 'link')
+      if (linkMark) {
+        text = `[${text}](${linkMark.attrs?.href ?? ''})`
       }
       parts.push(text)
     } else if (node.type === 'hardBreak') {
