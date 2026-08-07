@@ -4,6 +4,7 @@ import { App } from './App'
 import { LocaleProvider, setModuleLang } from './i18n/locale'
 import './styles.css'
 import './fonts/fonts.css'
+import './fonts/google-fonts.css'
 
 async function bootstrap(): Promise<void> {
   let lang: Lang = 'zh'
