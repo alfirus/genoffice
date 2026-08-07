@@ -45,7 +45,10 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
     return unsub
   }, [])
 
-  const value = useMemo(() => ({ lang, t: (k: StringKeys, p?: Record<string, string | number>) => tFunc(lang, k, p) }), [lang])
+  const value = useMemo(
+    () => ({ lang, t: (k: StringKeys, p?: Record<string, string | number>) => tFunc(lang, k, p) }),
+    [lang],
+  )
 
   return <LocaleContext.Provider value={value}>{children}</LocaleContext.Provider>
 }

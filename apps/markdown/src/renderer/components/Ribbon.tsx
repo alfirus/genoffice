@@ -23,8 +23,7 @@ export const Ribbon = memo(function Ribbon({ editor, activeTab, onTabChange, zoo
     [],
   )
 
-  const isActive = (name: string, attrs?: Record<string, unknown>) =>
-    editor.isActive(name, attrs)
+  const isActive = (name: string, attrs?: Record<string, unknown>) => editor.isActive(name, attrs)
 
   return (
     <div className="ribbon">
@@ -64,15 +63,7 @@ function isActive(editor: Editor, name: string, attrs?: Record<string, unknown>)
   return editor.isActive(name, attrs)
 }
 
-function HeadingBtn({
-  editor,
-  level,
-  label,
-}: {
-  editor: Editor
-  level: 1 | 2 | 3
-  label: string
-}) {
+function HeadingBtn({ editor, level, label }: { editor: Editor; level: 1 | 2 | 3; label: string }) {
   return (
     <button
       className={`ribbon-btn ${isActive(editor, 'heading', { level }) ? 'active' : ''}`}
@@ -135,7 +126,7 @@ function HomeTab({ editor }: { editor: Editor }) {
           onClick={() => editor.chain().focus().toggleNode('codeBlock', 'paragraph').run()}
           title="Code Block"
         >
-          { }
+          {}
         </button>
         <button
           className="ribbon-btn"

@@ -133,7 +133,13 @@ import {
   markdownIsDirty,
   requestMarkdownClose,
 } from '../../../markdown/src/main/markdown-main'
-import type { AccountLoginEvent, RecentEntry, RecentPage, RenameResult, UiTheme } from '../shared/home-api'
+import type {
+  AccountLoginEvent,
+  RecentEntry,
+  RecentPage,
+  RenameResult,
+  UiTheme,
+} from '../shared/home-api'
 import { HOME_CHANNELS } from '../shared/home-api'
 import type { TabKind } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
@@ -1474,7 +1480,11 @@ function supportedFileIn(argv: string[]): string | null {
   return (
     argv.find(
       (arg) =>
-        (DOCX_RE.test(arg) || XLSX_RE.test(arg) || PPTX_RE.test(arg) || PDF_RE.test(arg) || MD_RE.test(arg)) &&
+        (DOCX_RE.test(arg) ||
+          XLSX_RE.test(arg) ||
+          PPTX_RE.test(arg) ||
+          PDF_RE.test(arg) ||
+          MD_RE.test(arg)) &&
         existsSync(arg),
     ) ?? null
   )

@@ -13,7 +13,8 @@ const desktopApi: DesktopApi = {
   print: () => ipcRenderer.send('markdown:print'),
   exportPdf: () => ipcRenderer.send('markdown:export-pdf'),
   onMenuCommand: (handler) => {
-    const listener = (_e: Electron.IpcRendererEvent, cmd: string, payload?: string) => handler(cmd as never, payload)
+    const listener = (_e: Electron.IpcRendererEvent, cmd: string, payload?: string) =>
+      handler(cmd as never, payload)
     ipcRenderer.on('menu:command', listener)
     return () => ipcRenderer.removeListener('menu:command', listener)
   },
@@ -40,14 +41,20 @@ const desktopApi: DesktopApi = {
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },
   onDirtyChanged: (dirty) => ipcRenderer.send('markdown:dirty-changed', dirty),
-  winNew: async () => { ipcRenderer.send('win:new') },
+  winNew: async () => {
+    ipcRenderer.send('win:new')
+  },
   winList: () => ipcRenderer.invoke('win:list'),
   winFocus: (id) => ipcRenderer.send('win:focus', id),
   aiGetSettings: () => ipcRenderer.invoke('ai:get-settings'),
   aiSetSettings: (s) => ipcRenderer.invoke('ai:set-settings', s),
   aiChat: (r) => ipcRenderer.invoke('ai:chat', r),
-  aiStream: async (r) => { ipcRenderer.send('ai:stream', r) },
-  aiStreamCancel: async () => { ipcRenderer.send('ai:stream-cancel') },
+  aiStream: async (r) => {
+    ipcRenderer.send('ai:stream', r)
+  },
+  aiStreamCancel: async () => {
+    ipcRenderer.send('ai:stream-cancel')
+  },
   aiStreamChunk: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, chunk: unknown) => handler(chunk as never)
     ipcRenderer.on('ai:stream-chunk', listener)

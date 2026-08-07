@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { parseFrontmatter, serializeFrontmatter, markdownToProseMirror, prosemirrorToMarkdown } from '../src/renderer/markdown-io'
+import {
+  parseFrontmatter,
+  serializeFrontmatter,
+  markdownToProseMirror,
+  prosemirrorToMarkdown,
+} from '../src/renderer/markdown-io'
 import { markdownExtensions } from '../src/renderer/editor/extensions'
 
 describe('parseFrontmatter', () => {
@@ -82,8 +87,14 @@ describe('prosemirrorToMarkdown', () => {
         {
           type: 'bulletList',
           content: [
-            { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Item 1' }] }] },
-            { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Item 2' }] }] },
+            {
+              type: 'listItem',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Item 1' }] }],
+            },
+            {
+              type: 'listItem',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Item 2' }] }],
+            },
           ],
         },
       ],
@@ -141,8 +152,16 @@ describe('prosemirrorToMarkdown', () => {
         {
           type: 'taskList',
           content: [
-            { type: 'taskItem', attrs: { checked: true }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Done' }] }] },
-            { type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Todo' }] }] },
+            {
+              type: 'taskItem',
+              attrs: { checked: true },
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Done' }] }],
+            },
+            {
+              type: 'taskItem',
+              attrs: { checked: false },
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Todo' }] }],
+            },
           ],
         },
       ],

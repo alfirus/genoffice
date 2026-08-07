@@ -164,7 +164,8 @@ const homeApi: HomeApi = {
     return result === 'dark' || result === 'light' ? result : 'system'
   },
   async setTheme(theme) {
-    if (theme !== 'light' && theme !== 'dark' && theme !== 'system') throw new Error('Invalid theme.')
+    if (theme !== 'light' && theme !== 'dark' && theme !== 'system')
+      throw new Error('Invalid theme.')
     await ipcRenderer.invoke(HOME_CHANNELS.setTheme, theme)
   },
   async openGenTeam() {

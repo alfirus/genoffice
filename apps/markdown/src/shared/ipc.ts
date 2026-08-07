@@ -1,18 +1,56 @@
-import type { AiChatRequest, AiChatResponse, AiSettings, AiStreamChunk, AiStreamRequest, GenSparkAccountStatus } from '@genoffice/ai-provider'
-import type { AgentMessage, AgentToolCall, AgentToolDef, AgentToolResult } from '@genoffice/agent-core'
+import type {
+  AiChatRequest,
+  AiChatResponse,
+  AiSettings,
+  AiStreamChunk,
+  AiStreamRequest,
+  GenSparkAccountStatus,
+} from '@genoffice/ai-provider'
+import type {
+  AgentMessage,
+  AgentToolCall,
+  AgentToolDef,
+  AgentToolResult,
+} from '@genoffice/agent-core'
 
 export type MarkdownMenuCommand =
-  | 'new' | 'open' | 'open-path' | 'save' | 'save-as'
-  | 'undo' | 'redo'
-  | 'zoom-in' | 'zoom-out' | 'zoom-100'
-  | 'toggle-ai' | 'toggle-dark'
-  | 'bold' | 'italic' | 'strike' | 'code' | 'underline'
-  | 'heading-1' | 'heading-2' | 'heading-3'
-  | 'bullet-list' | 'ordered-list' | 'task-list'
-  | 'blockquote' | 'code-block' | 'horizontal-rule'
-  | 'insert-link' | 'insert-image' | 'insert-table'
-  | 'align-left' | 'align-center' | 'align-right' | 'align-justify'
-  | 'find' | 'print' | 'export-pdf' | 'word-count'
+  | 'new'
+  | 'open'
+  | 'open-path'
+  | 'save'
+  | 'save-as'
+  | 'undo'
+  | 'redo'
+  | 'zoom-in'
+  | 'zoom-out'
+  | 'zoom-100'
+  | 'toggle-ai'
+  | 'toggle-dark'
+  | 'bold'
+  | 'italic'
+  | 'strike'
+  | 'code'
+  | 'underline'
+  | 'heading-1'
+  | 'heading-2'
+  | 'heading-3'
+  | 'bullet-list'
+  | 'ordered-list'
+  | 'task-list'
+  | 'blockquote'
+  | 'code-block'
+  | 'horizontal-rule'
+  | 'insert-link'
+  | 'insert-image'
+  | 'insert-table'
+  | 'align-left'
+  | 'align-center'
+  | 'align-right'
+  | 'align-justify'
+  | 'find'
+  | 'print'
+  | 'export-pdf'
+  | 'word-count'
 
 export interface OpenFileResult {
   path: string
@@ -32,7 +70,10 @@ export interface DesktopApi {
   open(): Promise<OpenFileResult | null>
   openPath(filePath: string): Promise<OpenFileResult | null>
   consumePendingOpen(): Promise<OpenFileResult | null>
-  save(data: string, filePath?: string | null): Promise<{ ok: boolean; path?: string; error?: string }>
+  save(
+    data: string,
+    filePath?: string | null,
+  ): Promise<{ ok: boolean; path?: string; error?: string }>
   saveAs(data: string): Promise<{ ok: boolean; path?: string; error?: string }>
   saveNew(data: string): Promise<{ ok: boolean; path?: string; error?: string }>
   recent(): Promise<Array<{ name: string; path: string }>>

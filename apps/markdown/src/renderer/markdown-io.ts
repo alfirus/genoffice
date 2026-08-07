@@ -22,7 +22,10 @@ export function parseFrontmatter(raw: string): ParsedMarkdown {
   if (!match) return { frontmatter: null, body: raw }
   try {
     const data = yaml.load(match[1]) as Record<string, unknown>
-    return { frontmatter: data && typeof data === 'object' ? data : null, body: raw.slice(match[0].length) }
+    return {
+      frontmatter: data && typeof data === 'object' ? data : null,
+      body: raw.slice(match[0].length),
+    }
   } catch {
     return { frontmatter: null, body: raw }
   }
@@ -95,7 +98,9 @@ function serializeNode(node: JSONContent): string {
     case 'bulletList':
       return (node.content ?? []).map((li) => serializeListItem(li, '- ')).join('') + '\n'
     case 'orderedList':
-      return (node.content ?? []).map((li, i) => serializeListItem(li, `${i + 1}. `)).join('') + '\n'
+      return (
+        (node.content ?? []).map((li, i) => serializeListItem(li, `${i + 1}. `)).join('') + '\n'
+      )
     case 'listItem':
       return serializeListItem(node, '- ')
     case 'taskList':
@@ -106,13 +111,14 @@ function serializeNode(node: JSONContent): string {
       return `- ${checkbox}${serializeInline(node.content ?? [])}\n`
     }
     case 'blockquote':
-      return (node.content ?? [])
-        .map((n) => {
-          const s = serializeNode(n)
-          return s.replace(/\n/g, '\n> ').replace(/^> /, '> ')
-        })
-        .join('')
-        + '\n'
+      return (
+        (node.content ?? [])
+          .map((n) => {
+            const s = serializeNode(n)
+            return s.replace(/\n/g, '\n> ').replace(/^> /, '> ')
+          })
+          .join('') + '\n'
+      )
     case 'codeBlock': {
       const lang = (node.attrs?.language as string) ?? ''
       const code = serializeInline(node.content ?? [])
@@ -220,7 +226,11 @@ function serializeInline(content: JSONContent[]): string {
 function htmlToSimpleJson(html: string): JSONContent {
   const content: JSONContent[] = []
   const div = typeof document !== 'undefined' ? document.createElement('div') : null
-  if (!div) return { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: html }] }] }
+  if (!div)
+    return {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: html }] }],
+    }
   div.innerHTML = html
 
   for (const child of Array.from(div.children)) {
@@ -248,22 +258,43 @@ function domElementToNode(el: Element): JSONContent | null {
   }
 
   switch (tag) {
-    case 'h1': case 'h2': case 'h3': case 'h4': case 'h5': case 'h6':
+    case 'h1':
+    case 'h2':
+    case 'h3':
+    case 'h4':
+    case 'h5':
+    case 'h6':
       return { type: 'heading', attrs: { level: parseInt(tag[1]) }, content: childContent() }
     case 'p':
       return { type: 'paragraph', content: childContent() }
-    case 'strong': case 'b':
+    case 'strong':
+    case 'b':
       return { type: 'text', text: el.textContent ?? '', marks: [{ type: 'bold' }] }
-    case 'em': case 'i':
+    case 'em':
+    case 'i':
       return { type: 'text', text: el.textContent ?? '', marks: [{ type: 'italic' }] }
     case 'code':
       return { type: 'text', text: el.textContent ?? '', marks: [{ type: 'code' }] }
     case 'a':
-      return { type: 'text', text: el.textContent ?? '', marks: [{ type: 'link', attrs: { href: el.getAttribute('href') ?? '' } }] }
+      return {
+        type: 'text',
+        text: el.textContent ?? '',
+        marks: [{ type: 'link', attrs: { href: el.getAttribute('href') ?? '' } }],
+      }
     case 'ul':
-      return { type: 'bulletList', content: Array.from(el.children).map((li) => domElementToNode(li)).filter(Boolean) as JSONContent[] }
+      return {
+        type: 'bulletList',
+        content: Array.from(el.children)
+          .map((li) => domElementToNode(li))
+          .filter(Boolean) as JSONContent[],
+      }
     case 'ol':
-      return { type: 'orderedList', content: Array.from(el.children).map((li) => domElementToNode(li)).filter(Boolean) as JSONContent[] }
+      return {
+        type: 'orderedList',
+        content: Array.from(el.children)
+          .map((li) => domElementToNode(li))
+          .filter(Boolean) as JSONContent[],
+      }
     case 'li':
       return { type: 'listItem', content: childContent() }
     case 'blockquote':
@@ -273,7 +304,10 @@ function domElementToNode(el: Element): JSONContent | null {
     case 'hr':
       return { type: 'horizontalRule' }
     case 'img':
-      return { type: 'image', attrs: { src: el.getAttribute('src') ?? '', alt: el.getAttribute('alt') ?? '' } }
+      return {
+        type: 'image',
+        attrs: { src: el.getAttribute('src') ?? '', alt: el.getAttribute('alt') ?? '' },
+      }
     default:
       return { type: 'paragraph', content: childContent() }
   }

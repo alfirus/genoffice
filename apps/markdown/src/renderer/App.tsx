@@ -78,7 +78,10 @@ function EditorApp() {
         if (fmNode) {
           fmNode.attrs = { ...fmNode.attrs, data: frontmatterRef.current }
         } else {
-          json.content = [{ type: 'frontmatter', attrs: { data: frontmatterRef.current } }, ...(json.content ?? [])]
+          json.content = [
+            { type: 'frontmatter', attrs: { data: frontmatterRef.current } },
+            ...(json.content ?? []),
+          ]
         }
       }
       const markdown = prosemirrorToMarkdown(json)
@@ -309,7 +312,10 @@ function EditorApp() {
       <div className="app-main">
         <div className="editor-container">
           <div className="editor-scroll">
-            <div className="editor-page" style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}>
+            <div
+              className="editor-page"
+              style={{ transform: `scale(${zoom / 100})`, transformOrigin: 'top center' }}
+            >
               <EditorContent editor={editor} />
             </div>
           </div>

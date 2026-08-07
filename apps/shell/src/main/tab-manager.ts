@@ -221,7 +221,8 @@ export class TabManager {
     setActiveDocsResolver(target.kind === 'docs' ? () => target.view!.webContents : () => null)
     if (target.kind === 'sheets' && target.view) setActiveSheetsWebContents(target.view.webContents)
     if (target.kind === 'slides' && target.view) setActiveSlidesWebContents(target.view.webContents)
-    if (target.kind === 'markdown' && target.view) setMarkdownWcResolver(() => target.view!.webContents)
+    if (target.kind === 'markdown' && target.view)
+      setMarkdownWcResolver(() => target.view!.webContents)
     this.applyMenuFor(target.kind)
     this.onChanged()
   }
