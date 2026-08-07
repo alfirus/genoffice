@@ -11,9 +11,6 @@
     "isolatedModules": true,
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": false,
-    "noEmit": true,
-    "paths": {
-      "word-extractor": ["./types/word-extractor.d.ts"]
-    }
+    "noEmit": true
   }
 }
