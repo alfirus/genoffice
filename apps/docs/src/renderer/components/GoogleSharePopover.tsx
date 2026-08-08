@@ -197,8 +197,11 @@ export function GoogleSharePopover({
       return
     }
     setPermissions(result.data)
-    const anyone = result.data.find((p) => p.type === 'anyone')
-    setAnyoneRole(anyone ? (anyone.role === 'writer' ? 'writer' : 'reader') : null)
+    // 'domain' permissions (Workspace's org-wide default sharing policy) grant
+    // the same kind of open access as 'anyone' — treat them the same so the
+    // dialog never shows "Restricted" while the file is actually org-visible.
+    const openAccess = result.data.find((p) => p.type === 'anyone' || p.type === 'domain')
+    setAnyoneRole(openAccess ? (openAccess.role === 'writer' ? 'writer' : 'reader') : null)
   }
 
   useEffect(() => {
@@ -343,7 +346,7 @@ export function GoogleSharePopover({
                       disabled={loading}
                       onClick={() => void invite()}
                     >
-                      Send
+                      Save
                     </button>
                   </>
                 )}

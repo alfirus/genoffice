@@ -7374,6 +7374,38 @@ tr > .page-gap-cut {
   background: var(--hover, #f3f2f1);
 }
 
+/* Tooltip: dark pill under the button, 0.3s hover delay — native title=
+   attributes on these icon-only buttons are unreliable in Electron, so we
+   render our own, matching the .ai-msg-tool-btn pattern used elsewhere. */
+.gdh-icon-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: #232425;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgb(0 0 0 / 10%);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  transition-delay: 0s;
+  z-index: 10;
+}
+
+.gdh-icon-btn:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.3s;
+}
+
 .gdh-badge {
   position: absolute;
   top: -2px;

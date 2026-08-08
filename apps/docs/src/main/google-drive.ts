@@ -322,7 +322,10 @@ export async function renameFile(
   return { ok: true, data: (await result.data.json()) as { id: string; name: string } }
 }
 
-/** General access: anyone-with-the-link. Pass role=null to revoke it. */
+/** General access: anyone-with-the-link. Pass role=null to revoke it.
+ *  Also strips any 'domain' permission (Workspace's org-wide default sharing
+ *  policy attaches one of these to new files automatically) — without this,
+ *  "Restricted" silently leaves the file visible to the whole domain. */
 export async function setAnyoneAccess(
   fileId: string,
   role: 'reader' | 'writer' | null,
@@ -330,9 +333,13 @@ export async function setAnyoneAccess(
   if (role === null) {
     const perms = await listPermissions(fileId)
     if (!perms.ok) return perms
-    const anyone = perms.data.find((p) => p.type === 'anyone')
-    if (!anyone) return { ok: true, data: null }
-    return removePermission(fileId, anyone.id)
+    const openAccess = perms.data.filter((p) => p.type === 'anyone' || p.type === 'domain')
+    if (openAccess.length === 0) return { ok: true, data: null }
+    for (const perm of openAccess) {
+      const result = await removePermission(fileId, perm.id)
+      if (!result.ok) return result
+    }
+    return { ok: true, data: null }
   }
   // A file can only ever have one 'anyone' permission — POSTing again when one
   // already exists creates a duplicate instead of changing its role. List

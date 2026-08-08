@@ -395,6 +395,7 @@ export function GDocsHeader(props: Props) {
             type="button"
             className="gdh-icon-btn"
             title={`Comments${commentCount ? ` (${commentCount})` : ''}`}
+            data-tip={`Comments${commentCount ? ` (${commentCount})` : ''}`}
             onClick={onShowComments}
           >
             <IconComments />
@@ -405,6 +406,7 @@ export function GDocsHeader(props: Props) {
             className="gdh-icon-btn gdh-google-send-btn"
             disabled={!hasDoc || sendingToGoogle}
             title={googleFileId ? 'Update Google Doc' : 'Send to Google Docs'}
+            data-tip={googleFileId ? 'Update Google Doc' : 'Send to Google Docs'}
             onClick={onSendToGoogle}
           >
             <IconGoogleDrive />
@@ -414,6 +416,7 @@ export function GDocsHeader(props: Props) {
               type="button"
               className="gdh-icon-btn"
               title="Move to Drive folder"
+              data-tip="Move to Drive folder"
               onClick={onMoveGoogleFile}
             >
               <IconMoveFolder />
@@ -424,6 +427,7 @@ export function GDocsHeader(props: Props) {
               type="button"
               className="gdh-icon-btn"
               title="Make a copy"
+              data-tip="Make a copy"
               onClick={onMakeGoogleCopy}
             >
               <IconCopyDoc />
