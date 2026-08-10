@@ -1441,6 +1441,9 @@ export const workbookSaveRequestSchema = z
   .strict()
   .refine(
     (request) =>
+      // Explicit Save As is a valid request even with nothing to apply: it
+      // writes the unchanged workbook to a new path.
+      request.mode === 'save-as' ||
       request.edits.length > 0 ||
       request.structuralOps.length > 0 ||
       request.chartEdits.length > 0 ||
