@@ -263,4 +263,6 @@ export interface DesktopApi {
   /** Close guard chose "Save": main process asks the renderer to run the full save flow */
   onCloseSaveRequest(handler: () => void): () => void
   reportCloseSaveResult(ok: boolean): void
+  /** Report view menu state to the shell (for menu checkbox state updates) */
+  reportViewMenuState(state: { aiSidebar: boolean; darkCanvas: boolean }): void
 }

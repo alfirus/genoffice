@@ -119,6 +119,8 @@ const api: DesktopApi = {
     return () => ipcRenderer.removeListener('docs:close-save-request', listener)
   },
   reportCloseSaveResult: (ok: boolean) => ipcRenderer.send('docs:close-save-result', ok === true),
+  reportViewMenuState: (state: { aiSidebar: boolean; darkCanvas: boolean }) =>
+    ipcRenderer.send('docs:view-menu-state', state),
 }
 
 const projectApi: ProjectApi = {
