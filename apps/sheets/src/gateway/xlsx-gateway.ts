@@ -584,29 +584,6 @@ export async function planCellEditsToXlsx(
   sparklineAdditions: readonly SheetSparklineAddition[] = [],
   formulaValues: readonly SheetFormulaValues[] = [],
 ): Promise<MutationPlan> {
-  if (
-    edits.length === 0 &&
-    structuralOps.length === 0 &&
-    chartEdits.length === 0 &&
-    sheetPlan === undefined &&
-    filterStates.length === 0 &&
-    hyperlinkEdits.length === 0 &&
-    cfStates.length === 0 &&
-    dvStates.length === 0 &&
-    sheetProtections.length === 0 &&
-    definedNamesState === null &&
-    visualAdditions.length === 0 &&
-    pageSetupStates.length === 0 &&
-    noteStates.length === 0 &&
-    tableAdditions.length === 0 &&
-    pivotAdditions.length === 0 &&
-    pivotCacheRefreshPaths.length === 0 &&
-    pivotRefreshUpdates.length === 0 &&
-    visualEdits.length === 0 &&
-    sparklineAdditions.length === 0
-  ) {
-    throw new Error('There are no edits to save.')
-  }
   // A pending pivot pins final coordinates for its source and output; shifts
   // on either sheet, and sheet renames (worksheetSource@sheet), would desync
   // the recorded ranges. Fail closed, mirroring the table-add guard.
@@ -1350,16 +1327,41 @@ export function toA1Address(row: number, column: number): string {
   return `${letters}${row + 1}`
 }
 
+/**
+ * Flush a freshly written file before it is renamed into place. The handle
+ * must be writable — Windows' FlushFileBuffers rejects read-only handles
+ * with EPERM (#356) — and the flush is best-effort on top of that: inside
+ * cloud-sync folders (OneDrive/Dropbox) or under AV locks, reopening or
+ * syncing can still be refused with EPERM/EACCES/EBUSY. The bytes are
+ * already written at this point, so a refused flush only weakens crash
+ * durability and must not fail the save itself.
+ */
+export async function syncFileBestEffort(path: string): Promise<void> {
+  const tolerated = (error: unknown) =>
+    ['EPERM', 'EACCES', 'EBUSY', 'EINVAL', 'ENOSYS'].includes(
+      (error as NodeJS.ErrnoException).code ?? '',
+    )
+  let handle
+  try {
+    handle = await open(path, 'r+')
+  } catch (error: unknown) {
+    if (tolerated(error)) return
+    throw error
+  }
+  try {
+    await handle.sync()
+  } catch (error: unknown) {
+    if (!tolerated(error)) throw error
+  } finally {
+    await handle.close()
+  }
+}
+
 export async function writeXlsxAtomically(path: string, buffer: Buffer): Promise<void> {
   const temporaryPath = join(dirname(path), `.${crypto.randomUUID()}.tmp.xlsx`)
   try {
     await writeFile(temporaryPath, buffer, { flag: 'wx' })
-    const handle = await open(temporaryPath, 'r+')
-    try {
-      await handle.sync()
-    } finally {
-      await handle.close()
-    }
+    await syncFileBestEffort(temporaryPath)
     await rename(temporaryPath, path)
   } catch (error: unknown) {
     await rm(temporaryPath, { force: true })
