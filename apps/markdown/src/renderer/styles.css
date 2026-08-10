@@ -1,31 +1,21 @@
+/* Markdown editor styles — UI chrome uses design tokens from @genoffice/ui/tokens.css.
+ * App-specific accent colors (--accent / --accent-hover) use raw values (allowed for custom properties).
+ * Document content colors (mark highlight, selection) are raw values (content never follows theme). */
+
 :root {
-  --bg: #ffffff;
-  --bg-secondary: #f5f5f5;
-  --text: #1a1a1a;
-  --text-secondary: #666666;
-  --border: #e0e0e0;
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
-  --ribbon-bg: #f8f9fa;
-  --ribbon-border: #dee2e6;
-  --tab-active: #ffffff;
-  --tab-inactive: #e9ecef;
-  --status-bg: #f0f0f0;
+  --md-shadow: 0 1px 4px rgb(0 0 0 / 8%);
+  --md-highlight: #fff3bf;
+  --md-selection: rgb(37 99 235 / 10%);
 }
 
 [data-theme='dark'] {
-  --bg: #1e1e1e;
-  --bg-secondary: #252526;
-  --text: #cccccc;
-  --text-secondary: #999999;
-  --border: #3c3c3c;
   --accent: #4a9eff;
   --accent-hover: #3b8de8;
-  --ribbon-bg: #2d2d2d;
-  --ribbon-border: #3c3c3c;
-  --tab-active: #1e1e1e;
-  --tab-inactive: #2d2d2d;
-  --status-bg: #252526;
+  --md-shadow: 0 1px 4px rgb(0 0 0 / 20%);
+  --md-highlight: #4a3e00;
+  --md-selection: rgb(74 158 255 / 15%);
 }
 
 * {
@@ -36,7 +26,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
   overflow: hidden;
   height: 100vh;
@@ -51,8 +41,8 @@ body {
 /* ── Ribbon ─────────────────────────────────────────────────────────────── */
 
 .ribbon {
-  background: var(--ribbon-bg);
-  border-bottom: 1px solid var(--ribbon-border);
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
@@ -60,7 +50,7 @@ body {
   display: flex;
   gap: 0;
   padding: 0 8px;
-  border-bottom: 1px solid var(--ribbon-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .ribbon-tab {
@@ -117,12 +107,12 @@ body {
 }
 
 .ribbon-btn:hover {
-  background: var(--border);
+  background: var(--hover);
 }
 
 .ribbon-btn.active {
   background: var(--accent);
-  color: white;
+  color: var(--color-btn-primary-text);
 }
 
 .ribbon-btn-wide {
@@ -153,11 +143,11 @@ body {
   width: 100%;
   max-width: 800px;
   min-height: 600px;
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 2px;
   padding: 60px 72px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--md-shadow);
 }
 
 /* ── TipTap editor styles ───────────────────────────────────────────────── */
@@ -230,7 +220,7 @@ body {
 }
 
 .tiptap pre {
-  background: var(--bg-secondary);
+  background: var(--surface-subtle);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 12px 16px;
@@ -242,7 +232,7 @@ body {
 }
 
 .tiptap code {
-  background: var(--bg-secondary);
+  background: var(--surface-subtle);
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 1px 5px;
@@ -278,7 +268,7 @@ body {
 }
 
 .tiptap mark {
-  background-color: #fff3bf;
+  background-color: var(--md-highlight);
   border-radius: 2px;
   padding: 0 2px;
 }
@@ -304,12 +294,12 @@ body {
 }
 
 .tiptap th {
-  background: var(--bg-secondary);
+  background: var(--surface-subtle);
   font-weight: 600;
 }
 
 .tiptap .selectedCell {
-  background: rgba(37, 99, 235, 0.1);
+  background: var(--md-selection);
 }
 
 .tiptap .column-resize-handle {
@@ -348,7 +338,7 @@ body {
 /* ── Frontmatter ────────────────────────────────────────────────────────── */
 
 .markdown-frontmatter {
-  background: var(--bg-secondary);
+  background: var(--surface-subtle);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 12px 16px;
@@ -374,7 +364,7 @@ body {
 .ai-panel {
   width: 360px;
   border-left: 1px solid var(--border);
-  background: var(--bg-secondary);
+  background: var(--surface-subtle);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -408,7 +398,7 @@ body {
   padding: 8px 12px;
   font-size: 13px;
   resize: none;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
   font-family: inherit;
 }
@@ -417,7 +407,7 @@ body {
 
 .status-bar {
   height: 24px;
-  background: var(--status-bg);
+  background: var(--bg-content);
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
