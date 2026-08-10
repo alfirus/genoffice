@@ -14,7 +14,6 @@ function EditorApp() {
   const [dirty, setDirty] = useState(false)
   const [zoom, setZoom] = useState(100)
   const [showAi, setShowAi] = useState(false)
-  const [darkMode, setDarkMode] = useState(false)
   const [ribbonTab, setRibbonTab] = useState<'home' | 'insert' | 'view'>('home')
   const [wordCount, setWordCount] = useState({ words: 0, chars: 0 })
   const frontmatterRef = useRef<Record<string, unknown> | null>(null)
@@ -58,11 +57,13 @@ function EditorApp() {
 
   // ── Theme ───────────────────────────────────────────────────────────────
 
+  const [themeExplicit, setThemeExplicit] = useState<'light' | 'dark' | null>(null)
+
   // Read initial theme from shell
   useEffect(() => {
     void window.markdownApi.getTheme().then((theme) => {
       if (theme === 'dark' || theme === 'light') {
-        setDarkMode(theme === 'dark')
+        setThemeExplicit(theme)
       }
     })
   }, [])
@@ -71,14 +72,20 @@ function EditorApp() {
   useEffect(() => {
     return window.markdownApi.onThemeChanged((theme) => {
       if (theme === 'dark' || theme === 'light') {
-        setDarkMode(theme === 'dark')
+        setThemeExplicit(theme)
+      } else {
+        setThemeExplicit(null)
       }
     })
   }, [])
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light')
-  }, [darkMode])
+    if (themeExplicit) {
+      document.documentElement.setAttribute('data-theme', themeExplicit)
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }, [themeExplicit])
 
   // ── File I/O ────────────────────────────────────────────────────────────
 
@@ -234,7 +241,7 @@ function EditorApp() {
           setShowAi((v) => !v)
           break
         case 'toggle-dark':
-          setDarkMode((v) => !v)
+          setThemeExplicit((v) => (v === 'dark' ? 'light' : 'dark'))
           break
         // Format
         case 'bold':
@@ -350,7 +357,7 @@ function EditorApp() {
         activeTab={ribbonTab}
         onTabChange={setRibbonTab}
         zoom={zoom}
-        onToggleDark={() => setDarkMode((v) => !v)}
+        onToggleDark={() => setThemeExplicit((v) => (v === 'dark' ? 'light' : 'dark'))}
       />
       <div className="app-main">
         <div className="editor-container">
