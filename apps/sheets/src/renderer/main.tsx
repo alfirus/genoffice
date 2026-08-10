@@ -6,7 +6,6 @@ import '@univerjs/preset-sheets-core/lib/index.css'
 
 import { App } from './App'
 import { LocaleProvider, setModuleLang } from './i18n/locale'
-import type { UiTheme } from '../shared/desktop-api'
 import './styles.css'
 
 if (import.meta.hot) {
@@ -21,14 +20,14 @@ if (import.meta.hot) {
 const root = document.getElementById('root')
 if (!root) throw new Error('Missing application root.')
 
-function applyTheme(theme: UiTheme): void {
+function applyTheme(theme: string): void {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme')
   else document.documentElement.setAttribute('data-theme', theme)
 }
 
 async function bootstrap(): Promise<void> {
   let lang: Lang = 'zh'
-  let theme: UiTheme = 'system'
+  let theme: string = 'system'
   try {
     // per-promise catch: standalone runs have no app:get-theme handler, and
     // that rejection must not drop a resolved language
