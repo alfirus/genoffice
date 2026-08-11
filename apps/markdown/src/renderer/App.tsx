@@ -274,18 +274,18 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const offExport = window.markdownApi.onExportRequest((format) => void runExport(format))
+    const offExport = window.markdownApi.onExportRequest((format: ExportFormat) => void runExport(format))
     return offExport
   }, [runExport])
 
   useEffect(() => {
     const offSave = window.markdownApi.onSaveRequest(
-      (mode) => void doSave(mode).then((ok) => window.markdownApi.sendSaveRequestAck(ok)),
+      (mode: SaveMode) => void doSave(mode).then((ok) => window.markdownApi.sendSaveRequestAck(ok)),
     )
     const offClose = window.markdownApi.onCloseSaveRequest(() => {
       void doSave('save').then((ok) => window.markdownApi.sendCloseSaveResult(ok))
     })
-    const offRenamed = window.markdownApi.onFileRenamed((newPath) => setFilePath(newPath))
+    const offRenamed = window.markdownApi.onFileRenamed((newPath: string) => setFilePath(newPath))
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 's') {
         event.preventDefault()
