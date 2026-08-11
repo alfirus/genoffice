@@ -274,7 +274,9 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    const offExport = window.markdownApi.onExportRequest((format: ExportFormat) => void runExport(format))
+    const offExport = window.markdownApi.onExportRequest(
+      (format: ExportFormat) => void runExport(format),
+    )
     return offExport
   }, [runExport])
 
