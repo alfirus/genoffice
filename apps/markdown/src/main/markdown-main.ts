@@ -5,6 +5,7 @@ import { basename, dirname, extname, join, resolve, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
   BrowserWindow,
+  Menu,
   WebContentsView,
   app,
   dialog,
@@ -754,7 +755,130 @@ export function createMarkdownView(openPath?: string | null): WebContentsView {
   return view
 }
 
-/** Standalone window mode: `npm run dev -w @genoffice/markdown`, md path passed via argv */
+// ── Menu & command routing (called by shell) ────────────────────────────────
+
+function sendCommand(command: string): void {
+  activeMarkdownWebContents()?.send('menu:command', command)
+}
+
+let activeMarkdownWcResolver: (() => Electron.WebContents | null) | null = null
+
+export function setMarkdownWcResolver(resolver: () => Electron.WebContents | null): void {
+  activeMarkdownWcResolver = resolver
+}
+
+function activeMarkdownWebContents(): Electron.WebContents | null {
+  return activeMarkdownWcResolver?.() ?? null
+}
+
+export function buildMarkdownMenu(): void {
+  const template: Electron.MenuItemConstructorOptions[] = [
+    {
+      label: 'File',
+      submenu: [
+        { label: 'New', accelerator: 'CmdOrCtrl+N', click: () => sendCommand('new') },
+        { label: 'Open...', accelerator: 'CmdOrCtrl+O', click: () => sendCommand('open') },
+        { type: 'separator' },
+        { label: 'Save', accelerator: 'CmdOrCtrl+S', click: () => sendCommand('save') },
+        {
+          label: 'Save As...',
+          accelerator: 'Shift+CmdOrCtrl+S',
+          click: () => sendCommand('save-as'),
+        },
+        { type: 'separator' },
+        { label: 'Export as PDF...', click: () => sendCommand('export-pdf') },
+        { label: 'Print', accelerator: 'CmdOrCtrl+P', click: () => sendCommand('print') },
+        { type: 'separator' },
+        { role: 'close' },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'Format',
+      submenu: [
+        { label: 'Bold', accelerator: 'CmdOrCtrl+B', click: () => sendCommand('bold') },
+        { label: 'Italic', accelerator: 'CmdOrCtrl+I', click: () => sendCommand('italic') },
+        { label: 'Underline', accelerator: 'CmdOrCtrl+U', click: () => sendCommand('underline') },
+        {
+          label: 'Strikethrough',
+          accelerator: 'CmdOrCtrl+Shift+X',
+          click: () => sendCommand('strike'),
+        },
+        { label: 'Code', accelerator: 'CmdOrCtrl+E', click: () => sendCommand('code') },
+        { type: 'separator' },
+        { label: 'Heading 1', accelerator: 'CmdOrCtrl+1', click: () => sendCommand('heading-1') },
+        { label: 'Heading 2', accelerator: 'CmdOrCtrl+2', click: () => sendCommand('heading-2') },
+        { label: 'Heading 3', accelerator: 'CmdOrCtrl+3', click: () => sendCommand('heading-3') },
+        { type: 'separator' },
+        {
+          label: 'Bullet List',
+          accelerator: 'CmdOrCtrl+Shift+8',
+          click: () => sendCommand('bullet-list'),
+        },
+        {
+          label: 'Ordered List',
+          accelerator: 'CmdOrCtrl+Shift+7',
+          click: () => sendCommand('ordered-list'),
+        },
+        {
+          label: 'Task List',
+          accelerator: 'CmdOrCtrl+Shift+9',
+          click: () => sendCommand('task-list'),
+        },
+        { type: 'separator' },
+        {
+          label: 'Blockquote',
+          accelerator: 'CmdOrCtrl+Shift+.',
+          click: () => sendCommand('blockquote'),
+        },
+        {
+          label: 'Code Block',
+          accelerator: 'CmdOrCtrl+Shift+K',
+          click: () => sendCommand('code-block'),
+        },
+        { label: 'Horizontal Rule', click: () => sendCommand('horizontal-rule') },
+        { type: 'separator' },
+        { label: 'Link', accelerator: 'CmdOrCtrl+K', click: () => sendCommand('insert-link') },
+        { label: 'Image', click: () => sendCommand('insert-image') },
+        { label: 'Table', click: () => sendCommand('insert-table') },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', click: () => sendCommand('zoom-in') },
+        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: () => sendCommand('zoom-out') },
+        { label: 'Actual Size', accelerator: 'CmdOrCtrl+0', click: () => sendCommand('zoom-100') },
+        { type: 'separator' },
+        { label: 'AI Sidebar', click: () => sendCommand('toggle-ai') },
+        { label: 'Dark Mode', click: () => sendCommand('toggle-dark') },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+  ]
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+export function teardownMarkdownRenderer(contents: Electron.WebContents): void {
+  dirtyByWc.delete(contents.id)
+  if (!contents.isDestroyed()) contents.send('markdown:teardown')
+}
+
+// ── Standalone ───────────────────────────────────────────────────────────────
+
 export function startMarkdownStandalone(): void {
   installNavigationGuard(app)
   installContextMenu(app, () => contextMenuLabels(getUiLang()))
