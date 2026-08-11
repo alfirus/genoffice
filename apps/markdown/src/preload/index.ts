@@ -1,90 +1,72 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { DesktopApi, ProjectApi } from '../shared/ipc'
+import type { Lang } from '@genoffice/i18n'
+import type { AiStreamChunk } from '@genoffice/ai-provider'
+import type { ProjectApi } from '@genoffice/project-store'
+import { AI_CHANNELS, MARKDOWN_CHANNELS } from '../shared/ipc'
+import type { ExportFormat, MarkdownApi, SaveMode, UiTheme } from '../shared/ipc'
 
-const desktopApi: DesktopApi = {
-  getLanguage: () => ipcRenderer.invoke('app:get-language'),
-  open: () => ipcRenderer.invoke('markdown:open'),
-  openPath: (p) => ipcRenderer.invoke('markdown:open-path', p),
-  consumePendingOpen: () => ipcRenderer.invoke('markdown:consume-pending'),
-  save: (data, p) => ipcRenderer.invoke('markdown:save', data, p),
-  saveAs: (data) => ipcRenderer.invoke('markdown:save-as', data),
-  saveNew: (data) => ipcRenderer.invoke('markdown:save-new', data),
-  recent: () => ipcRenderer.invoke('markdown:recent'),
-  print: () => ipcRenderer.send('markdown:print'),
-  exportPdf: () => ipcRenderer.send('markdown:export-pdf'),
-  onMenuCommand: (handler) => {
-    const listener = (_e: Electron.IpcRendererEvent, cmd: string, payload?: string) =>
-      handler(cmd as never, payload)
-    ipcRenderer.on('menu:command', listener)
-    return () => ipcRenderer.removeListener('menu:command', listener)
-  },
-  onCloseCheck: (handler) => {
-    const listener = () => handler()
-    ipcRenderer.on('markdown:close-check', listener)
-    return () => ipcRenderer.removeListener('markdown:close-check', listener)
+const api: MarkdownApi = {
+  consumePending: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.consumePending),
+  readFile: (path) => ipcRenderer.invoke(MARKDOWN_CHANNELS.readFile, path),
+  save: (request) => ipcRenderer.invoke(MARKDOWN_CHANNELS.save, request),
+  setDirty: (dirty) => ipcRenderer.send(MARKDOWN_CHANNELS.dirtyChanged, dirty),
+  onSaveRequest: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, mode: SaveMode) => handler(mode)
+    ipcRenderer.on(MARKDOWN_CHANNELS.saveRequest, listener)
+    return () => ipcRenderer.removeListener(MARKDOWN_CHANNELS.saveRequest, listener)
   },
   onCloseSaveRequest: (handler) => {
     const listener = () => handler()
-    ipcRenderer.on('markdown:close-save-request', listener)
-    return () => ipcRenderer.removeListener('markdown:close-save-request', listener)
+    ipcRenderer.on(MARKDOWN_CHANNELS.closeSaveRequest, listener)
+    return () => ipcRenderer.removeListener(MARKDOWN_CHANNELS.closeSaveRequest, listener)
   },
-  reportCloseCheckResult: (state) => ipcRenderer.send('markdown:close-check-result', state),
-  reportCloseSaveResult: (ok) => ipcRenderer.send('markdown:close-save-result', ok),
-  onTeardown: (handler) => {
-    const listener = () => handler()
-    ipcRenderer.on('markdown:teardown', listener)
-    return () => ipcRenderer.removeListener('markdown:teardown', listener)
+  sendCloseSaveResult: (ok) => ipcRenderer.send(MARKDOWN_CHANNELS.closeSaveResult, ok),
+  sendSaveRequestAck: (ok) => ipcRenderer.send(MARKDOWN_CHANNELS.saveRequestAck, ok),
+  onFileRenamed: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, newPath: string) => handler(newPath)
+    ipcRenderer.on(MARKDOWN_CHANNELS.fileRenamed, listener)
+    return () => ipcRenderer.removeListener(MARKDOWN_CHANNELS.fileRenamed, listener)
   },
+  pickImage: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.pickImage),
+  saveImage: (data) => ipcRenderer.invoke(MARKDOWN_CHANNELS.saveImage, data),
+  readImage: (src) => ipcRenderer.invoke(MARKDOWN_CHANNELS.readImage, src),
+  onExportRequest: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, format: ExportFormat) => handler(format)
+    ipcRenderer.on(MARKDOWN_CHANNELS.exportRequest, listener)
+    return () => ipcRenderer.removeListener(MARKDOWN_CHANNELS.exportRequest, listener)
+  },
+  exportDocx: (request) => ipcRenderer.invoke(MARKDOWN_CHANNELS.exportDocx, request),
+  exportPdf: (request) => ipcRenderer.invoke(MARKDOWN_CHANNELS.exportPdf, request),
+  getLanguage: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.getLanguage),
   onLanguageChanged: (handler) => {
-    const listener = (_e: Electron.IpcRendererEvent, lang: string) => handler(lang)
-    ipcRenderer.on('app:language-changed', listener)
-    return () => ipcRenderer.removeListener('app:language-changed', listener)
+    const listener = (_e: Electron.IpcRendererEvent, lang: Lang) => handler(lang)
+    ipcRenderer.on(MARKDOWN_CHANNELS.languageChanged, listener)
+    return () => ipcRenderer.removeListener(MARKDOWN_CHANNELS.languageChanged, listener)
   },
-  getTheme: () => ipcRenderer.invoke('home:get-theme'),
+  getTheme: () => ipcRenderer.invoke(MARKDOWN_CHANNELS.getTheme),
   onThemeChanged: (handler) => {
-    const listener = (_e: Electron.IpcRendererEvent, theme: string) => handler(theme)
-    ipcRenderer.on('app:theme-changed', listener)
-    return () => ipcRenderer.removeListener('app:theme-changed', listener)
+    const listener = (_e: Electron.IpcRendererEvent, theme: UiTheme) => handler(theme)
+    ipcRenderer.on(MARKDOWN_CHANNELS.themeChanged, listener)
+    return () => ipcRenderer.removeListener(MARKDOWN_CHANNELS.themeChanged, listener)
   },
-  onDirtyChanged: (dirty) => ipcRenderer.send('markdown:dirty-changed', dirty),
-  winNew: async () => {
-    ipcRenderer.send('win:new')
+  getAiSettings: () => ipcRenderer.invoke(AI_CHANNELS.getSettings),
+  aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
+  aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),
+  onAiStream: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, chunk: AiStreamChunk) => handler(chunk)
+    ipcRenderer.on(AI_CHANNELS.streamChunk, listener)
+    return () => ipcRenderer.removeListener(AI_CHANNELS.streamChunk, listener)
   },
-  winList: () => ipcRenderer.invoke('win:list'),
-  winFocus: (id) => ipcRenderer.send('win:focus', id),
-  aiGetSettings: () => ipcRenderer.invoke('ai:get-settings'),
-  aiSetSettings: (s) => ipcRenderer.invoke('ai:set-settings', s),
-  aiChat: (r) => ipcRenderer.invoke('ai:chat', r),
-  aiStream: async (r) => {
-    ipcRenderer.send('ai:stream', r)
-  },
-  aiStreamCancel: async () => {
-    ipcRenderer.send('ai:stream-cancel')
-  },
-  aiStreamChunk: (handler) => {
-    const listener = (_e: Electron.IpcRendererEvent, chunk: unknown) => handler(chunk as never)
-    ipcRenderer.on('ai:stream-chunk', listener)
-    return () => ipcRenderer.removeListener('ai:stream-chunk', listener)
-  },
-  aiGskStatus: () => ipcRenderer.invoke('ai:gsk-status'),
-  aiGskLogin: () => ipcRenderer.invoke('ai:gsk-login'),
-  aiWebSearch: (q) => ipcRenderer.invoke('ai:web-search', q),
-  aiFetchImage: (url) => ipcRenderer.invoke('ai:fetch-image', url),
-  webUtils: { getPathForFile: (f: File) => ipcRenderer.sendSync('webUtils:getPathForFile', f) },
+  webSearch: (query, maxResults) => ipcRenderer.invoke(AI_CHANNELS.webSearch, query, maxResults),
 }
 
-const projectApi: ProjectApi = {
-  resolveChat: (p) => ipcRenderer.invoke('project:resolveChat', p),
-  appendChat: (p, m) => ipcRenderer.invoke('project:appendChat', p, m),
-  loadChat: (p) => ipcRenderer.invoke('project:loadChat', p),
-  rebindChat: (p, c) => ipcRenderer.invoke('project:rebindChat', p, c),
-  list: () => ipcRenderer.invoke('project:list'),
-  create: (n) => ipcRenderer.invoke('project:create', n),
-  rename: (o, n) => ipcRenderer.invoke('project:rename', o, n),
-  delete: (p) => ipcRenderer.invoke('project:delete', p),
-  moveFile: (f, p) => ipcRenderer.invoke('project:moveFile', f, p),
-  timeline: (p) => ipcRenderer.invoke('project:timeline', p),
+/** Chat persistence: the shared project:* handlers are registered once by the shell (docs-main registerProjectIpc) */
+const projectApi: Pick<ProjectApi, 'resolveChat' | 'appendChat' | 'loadChat' | 'rebindChat'> = {
+  resolveChat: (args) => ipcRenderer.invoke('project:resolveChat', args),
+  appendChat: (args) => ipcRenderer.invoke('project:appendChat', args),
+  loadChat: (args) => ipcRenderer.invoke('project:loadChat', args),
+  rebindChat: (args) => ipcRenderer.invoke('project:rebindChat', args),
 }
 
-contextBridge.exposeInMainWorld('markdownApi', desktopApi)
+contextBridge.exposeInMainWorld('markdownApi', api)
 contextBridge.exposeInMainWorld('projectApi', projectApi)
