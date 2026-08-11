@@ -112,3 +112,42 @@ export interface ProjectApi {
   moveFile(filePath: string, projectPath: string): Promise<void>
   timeline(filePath: string): Promise<Array<{ date: string; label: string }>>
 }
+
+// ── Export / Save types (used by markdown-main.ts) ──────────────────────────
+
+export type SaveMode = 'save' | 'saveAs'
+
+export interface SaveMarkdownRequest {
+  /** full document text (frontmatter included) */
+  text: string
+  mode: SaveMode
+  suggestedName?: string
+}
+
+export type SaveMarkdownResult =
+  | { ok: true; path: string }
+  | { ok: true; canceled: true }
+  | { ok: false; error: string }
+
+export type ExportFormat = 'pdf' | 'docx' | 'docs'
+
+export interface ExportDocxRequest {
+  base64: string
+  suggestedName: string
+  mode: 'dialog' | 'openInDocs'
+}
+
+export interface ExportPdfRequest {
+  html: string
+  suggestedName: string
+}
+
+export type ExportResult =
+  | { ok: true; path: string }
+  | { ok: true; canceled: true }
+  | { ok: false; error: string }
+
+export interface ImageData {
+  base64: string
+  mime: 'image/png' | 'image/jpeg' | 'image/gif'
+}
