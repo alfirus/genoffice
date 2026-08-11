@@ -373,6 +373,199 @@ body {
 .ai-panel-header {
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+/* Thinking indicator: shimmer label above two grow/shrink dots */
+.ai-typing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.ai-typing-label {
+  display: inline-block;
+  position: relative;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--md-shimmer-base);
+  -webkit-text-fill-color: transparent;
+  background: var(--md-shimmer-base)
+    linear-gradient(
+      to left,
+      var(--md-shimmer-base),
+      var(--md-shimmer-hi) 50%,
+      var(--md-shimmer-base)
+    );
+  background-clip: text;
+  -webkit-background-clip: text;
+  background-repeat: no-repeat;
+  background-size: 70% 100%;
+  animation: ai-thinking-shimmer 1.2s infinite alternate linear;
+}
+
+.ai-typing-elapsed {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes ai-thinking-shimmer {
+  0% {
+    background-position: -100% top;
+  }
+  100% {
+    background-position: 250% top;
+  }
+}
+
+.ai-typing-dots {
+  height: 12px;
+  display: flex;
+  gap: 2px;
+}
+
+.ai-typing-dot-slot {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 12px;
+}
+
+.ai-typing-dot-grow,
+.ai-typing-dot-shrink {
+  background: var(--color-brand-secondary);
+  border-radius: 50%;
+}
+
+.ai-typing-dot-grow {
+  animation: ai-dot-grow 2s infinite;
+}
+
+.ai-typing-dot-shrink {
+  animation: ai-dot-shrink 2s infinite;
+}
+
+@keyframes ai-dot-grow {
+  0%,
+  100% {
+    width: 4px;
+    height: 4px;
+    opacity: 0.45;
+  }
+  50% {
+    width: 12px;
+    height: 12px;
+    opacity: 1;
+  }
+}
+
+@keyframes ai-dot-shrink {
+  0%,
+  100% {
+    width: 12px;
+    height: 12px;
+    opacity: 1;
+  }
+  50% {
+    width: 4px;
+    height: 4px;
+    opacity: 0.45;
+  }
+}
+
+/* streaming caret at the tail of streaming assistant text */
+.ai-msg-streaming .ai-md > :last-child::after {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 1em;
+  margin-left: 2px;
+  border-radius: 1px;
+  background: var(--color-text-secondary);
+  vertical-align: text-bottom;
+  animation: ai-caret-blink 900ms steps(1, end) infinite;
+}
+
+@keyframes ai-caret-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-typing-label,
+  .ai-msg-streaming .ai-md > :last-child::after {
+    animation: none;
+  }
+}
+
+/* hover actions under assistant messages (copy / regenerate):
+ * borderless 30px icon buttons, radius 8, hover = subtle gray fill (same as docs) */
+.ai-msg-toolbar {
+  display: flex;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.ai-msg-tool-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 30px;
+  min-width: 30px;
+  padding: 5px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ai-msg-tool-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ai-msg-tool-btn:hover {
+  background: var(--color-bg-subtle);
+}
+
+.ai-msg-tool-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--md-focus-ring-blue);
+}
+
+.ai-msg-tool-btn:active {
+  filter: brightness(0.88);
+  transform: scale(0.98);
+}
+
+/* Version snapshots footer (same as docs) */
+.ai-versions {
+  border-top: 1px solid var(--border);
+  padding: 8px 14px 10px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.ai-versions-title {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
   font-weight: 600;
   font-size: 13px;
   display: flex;
@@ -430,4 +623,189 @@ body {
   flex: 1;
   display: flex;
   overflow: hidden;
+  min-height: 0;
+}
+
+.app-main .editor-scroll {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ---- transient AI-change highlight ---- */
+
+.doc-editor .ai-changed {
+  background: var(--md-ai-changed);
+  border-radius: 2px;
+  transition: background 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---- code block chrome ---- */
+
+.md-codeblock {
+  position: relative;
+  margin: 0.8em 0;
+}
+
+.md-codeblock pre {
+  margin: 0;
+}
+
+.md-codeblock-bar {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.md-codeblock:hover .md-codeblock-bar,
+.md-codeblock-bar:focus-within {
+  opacity: 1;
+}
+
+.md-codeblock-lang {
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  padding: 0 4px;
+}
+
+.md-codeblock-copy {
+  height: 22px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  padding: 0 8px;
+  cursor: pointer;
+}
+
+.md-codeblock-copy:hover {
+  background: var(--hover);
+}
+
+/* ---- floating table menu ---- */
+
+.table-menu {
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px var(--md-shadow-color);
+}
+
+.tm-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tm-btn:hover {
+  background: var(--hover);
+}
+
+.tm-btn.active {
+  background: var(--active-bg);
+  color: var(--color-text-primary);
+}
+
+.tm-btn.danger:hover {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.tm-sep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 3px;
+}
+
+/* ---- block gutter (+ and grip) & block menu ---- */
+
+.md-block-gutter {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.md-gutter-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--icon-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.md-gutter-btn:hover {
+  background: var(--hover);
+  color: var(--text-muted);
+}
+
+.md-gutter-grip {
+  cursor: grab;
+}
+
+.md-block-menu {
+  position: absolute;
+  z-index: 30;
+  min-width: 150px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 10px 32px var(--md-shadow-color);
+}
+
+.md-block-menu-item {
+  display: block;
+  width: 100%;
+  text-align: start;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.md-block-menu-item:hover {
+  background: var(--hover);
+}
+
+.md-block-menu-item.danger {
+  color: var(--danger);
+}
+
+.md-block-menu-item.danger:hover {
+  background: var(--danger-bg);
 }
