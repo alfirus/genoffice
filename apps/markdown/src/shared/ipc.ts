@@ -8,6 +8,30 @@ import type {
 } from '@genoffice/ai-provider'
 import type { AgentMessage } from '@genoffice/agent-core'
 
+export const MARKDOWN_CHANNELS = {
+  consumePending: 'markdown:consume-pending',
+  readFile: 'markdown:read-file',
+  save: 'markdown:save',
+  saveRequest: 'markdown:save-request',
+  saveRequestAck: 'markdown:save-request-ack',
+  dirtyChanged: 'markdown:dirty-changed',
+  closeSaveRequest: 'markdown:close-save-request',
+  closeSaveResult: 'markdown:close-save-result',
+  fileRenamed: 'markdown:file-renamed',
+  pickImage: 'markdown:pick-image',
+  saveImage: 'markdown:save-image',
+  readImage: 'markdown:read-image',
+  exportRequest: 'markdown:export-request',
+  exportDocx: 'markdown:export-docx',
+  exportPdf: 'markdown:export-pdf',
+  getLanguage: 'app:get-language',
+  languageChanged: 'app:language-changed',
+  getTheme: 'app:get-theme',
+  themeChanged: 'app:theme-changed',
+} as const
+
+export type UiTheme = 'light' | 'dark' | 'system'
+
 export type MarkdownMenuCommand =
   | 'new'
   | 'open'
@@ -125,9 +149,7 @@ export interface SaveMarkdownRequest {
 }
 
 export type SaveMarkdownResult =
-  | { ok: true; path: string }
-  | { ok: true; canceled: true }
-  | { ok: false; error: string }
+  { ok: true; path: string } | { ok: true; canceled: true } | { ok: false; error: string }
 
 export type ExportFormat = 'pdf' | 'docx' | 'docs'
 
@@ -143,9 +165,7 @@ export interface ExportPdfRequest {
 }
 
 export type ExportResult =
-  | { ok: true; path: string }
-  | { ok: true; canceled: true }
-  | { ok: false; error: string }
+  { ok: true; path: string } | { ok: true; canceled: true } | { ok: false; error: string }
 
 export interface ImageData {
   base64: string

@@ -6,7 +6,13 @@ export default defineConfig({
   // Bundle everything into the shell main (same policy as apps/docs): the
   // imported docs/sheets main modules are TS source with no build artifacts,
   // so externalizing them would break Node ESM resolution at runtime.
-  main: {},
+  main: {
+    build: {
+      rollupOptions: {
+        external: ['word-extractor'],
+      },
+    },
+  },
   preload: {
     build: {
       rollupOptions: {

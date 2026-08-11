@@ -875,6 +875,13 @@ export function createMarkdownView(openPath?: string | null): WebContentsView {
 }
 
 /** Standalone window mode: `npm run dev -w @genoffice/markdown`, md path passed via argv */
+export function teardownMarkdownRenderer(contents: Electron.WebContents): void {
+  dirtyByWc.delete(contents.id)
+  if (!contents.isDestroyed()) contents.send('markdown:teardown')
+}
+
+// ── Standalone ───────────────────────────────────────────────────────────────
+
 export function startMarkdownStandalone(): void {
   installNavigationGuard(app)
   installContextMenu(app, () => contextMenuLabels(getUiLang()))
