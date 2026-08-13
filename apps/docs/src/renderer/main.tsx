@@ -5,6 +5,7 @@ import { LocaleProvider, setModuleLang } from './i18n/locale'
 import '@genoffice/ui/tokens.css'
 import './styles.css'
 import './fonts/fonts.css'
+import './fonts/google-fonts.css'
 
 function applyTheme(theme: string): void {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme')

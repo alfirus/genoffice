@@ -20,12 +20,6 @@ const api: DesktopApi = {
     ipcRenderer.on('app:language-changed', listener)
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },
-  getTheme: () => ipcRenderer.invoke('home:get-theme'),
-  onThemeChanged: (handler) => {
-    const listener = (_e: IpcRendererEvent, theme: string) => handler(theme)
-    ipcRenderer.on('app:theme-changed', listener)
-    return () => ipcRenderer.removeListener('app:theme-changed', listener)
-  },
   openDocx: () => ipcRenderer.invoke('docs:open'),
   openDocxPath: (path: string) => ipcRenderer.invoke('docs:open-path', path),
   consumePendingOpenDocx: () => ipcRenderer.invoke('docs:consume-pending-open'),
@@ -119,8 +113,36 @@ const api: DesktopApi = {
     return () => ipcRenderer.removeListener('docs:close-save-request', listener)
   },
   reportCloseSaveResult: (ok: boolean) => ipcRenderer.send('docs:close-save-result', ok === true),
-  reportViewMenuState: (state: { aiSidebar: boolean; darkCanvas: boolean }) =>
-    ipcRenderer.send('docs:view-menu-state', state),
+
+  googleAuthStatus: () => ipcRenderer.invoke('google:auth-status'),
+  googleSignIn: () => ipcRenderer.invoke('google:sign-in'),
+  googleSignOut: () => ipcRenderer.invoke('google:sign-out'),
+  googleListDocs: () => ipcRenderer.invoke('google:list-docs'),
+  googleImportDoc: (fileId: string) => ipcRenderer.invoke('google:import-doc', fileId),
+  googleGetFileMeta: (fileId: string) => ipcRenderer.invoke('google:get-file-meta', fileId),
+  googleCreateDoc: (name: string, data: ArrayBuffer) =>
+    ipcRenderer.invoke('google:create-doc', name, data),
+  googleUpdateDoc: (fileId: string, data: ArrayBuffer, fallbackName: string) =>
+    ipcRenderer.invoke('google:update-doc', fileId, data, fallbackName),
+  googleListPermissions: (fileId: string) => ipcRenderer.invoke('google:list-permissions', fileId),
+  googleAddPermission: (fileId: string, emailAddress: string, role) =>
+    ipcRenderer.invoke('google:add-permission', fileId, emailAddress, role),
+  googleUpdatePermission: (fileId: string, permissionId: string, role) =>
+    ipcRenderer.invoke('google:update-permission', fileId, permissionId, role),
+  googleRemovePermission: (fileId: string, permissionId: string) =>
+    ipcRenderer.invoke('google:remove-permission', fileId, permissionId),
+  googleSetAnyoneAccess: (fileId: string, role) =>
+    ipcRenderer.invoke('google:set-anyone-access', fileId, role),
+  googleOpenExternal: (url: string) => void ipcRenderer.invoke('google:open-external', url),
+  googleGetSettings: () => ipcRenderer.invoke('google:get-settings'),
+  googleSetSettings: (settings) => ipcRenderer.invoke('google:set-settings', settings),
+  googleListFolders: (parentId?: string) => ipcRenderer.invoke('google:list-folders', parentId),
+  googleMoveFile: (fileId: string, folderId: string) =>
+    ipcRenderer.invoke('google:move-file', fileId, folderId),
+  googleCopyFile: (fileId: string, name: string, folderId?: string) =>
+    ipcRenderer.invoke('google:copy-file', fileId, name, folderId),
+  googleRenameFile: (fileId: string, name: string) =>
+    ipcRenderer.invoke('google:rename-file', fileId, name),
 }
 
 const projectApi: ProjectApi = {
