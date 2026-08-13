@@ -61,18 +61,18 @@ function EditorApp() {
 
   // Read initial theme from shell
   useEffect(() => {
-    void window.markdownApi.getTheme().then((theme) => {
+    void window.markdownApi.getTheme().then((theme: string) => {
       if (theme === 'dark' || theme === 'light') {
-        setThemeExplicit(theme)
+        setThemeExplicit(theme as 'light' | 'dark')
       }
     })
   }, [])
 
   // Listen for theme changes from shell
   useEffect(() => {
-    return window.markdownApi.onThemeChanged((theme) => {
+    return window.markdownApi.onThemeChanged((theme: string) => {
       if (theme === 'dark' || theme === 'light') {
-        setThemeExplicit(theme)
+        setThemeExplicit(theme as 'light' | 'dark')
       } else {
         setThemeExplicit(null)
       }
@@ -92,7 +92,7 @@ function EditorApp() {
   const loadFile = useCallback(
     async (result: OpenFileResult) => {
       if (!editor) return
-      const text = new TextDecoder().decode(result.data)
+      const text = result.data
       // @ts-expect-error TipTap duplicate module issue in npm workspace monorepo
       const json = markdownToProseMirror(text, markdownExtensions)
       const fmNode = json.content?.find((n) => n.type === 'frontmatter')

@@ -48,7 +48,8 @@ const desktopApi: DesktopApi = {
   },
   getTheme: () => ipcRenderer.invoke('home:get-theme'),
   onThemeChanged(handler) {
-    const listener = (_event: Electron.IpcRendererEvent, theme: string) => handler(theme)
+    const listener = (_event: Electron.IpcRendererEvent, theme: 'light' | 'dark' | 'system') =>
+      handler(theme)
     ipcRenderer.on('app:theme-changed', listener)
     return () => ipcRenderer.removeListener('app:theme-changed', listener)
   },

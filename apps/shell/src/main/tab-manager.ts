@@ -10,6 +10,11 @@ import {
   setActiveDocsResolver,
   teardownDocsRenderer,
 } from '../../../docs/src/main/docs-main'
+import {
+  createMarkdownView,
+  markdownIsDirty,
+  requestMarkdownClose,
+} from '../../../markdown/src/main/markdown-main'
 import { createPdfView, pdfIsDirty, requestPdfClose } from '../../../pdf/src/main/pdf-main'
 import {
   createSheetsView,
@@ -24,13 +29,6 @@ import {
   setActiveSlidesWebContents,
   slidesIsDirty,
 } from '../../../slides/src/main/slides-main'
-import {
-  createMarkdownView,
-  markdownIsDirty,
-  requestMarkdownClose,
-  setMarkdownWcResolver,
-  teardownMarkdownRenderer,
-} from '../../../markdown/src/main/markdown-main'
 import type { TabKind, TabSummary } from '../shared/tabs-api'
 
 interface TabRecord {
@@ -221,8 +219,6 @@ export class TabManager {
     setActiveDocsResolver(target.kind === 'docs' ? () => target.view!.webContents : () => null)
     if (target.kind === 'sheets' && target.view) setActiveSheetsWebContents(target.view.webContents)
     if (target.kind === 'slides' && target.view) setActiveSlidesWebContents(target.view.webContents)
-    if (target.kind === 'markdown' && target.view)
-      setMarkdownWcResolver(() => target.view!.webContents)
     this.applyMenuFor(target.kind)
     this.onChanged()
   }
@@ -281,6 +277,13 @@ export class TabManager {
       .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
   }
 
+  /** markdown tabs whose renderer reports unsaved edits (shell-close guard) */
+  dirtyMarkdownTabs(): Array<{ id: string; webContents: WebContents }> {
+    return this.tabs
+      .filter((t) => t.kind === 'markdown' && t.view && markdownIsDirty(t.view.webContents.id))
+      .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
+  }
+
   /** slides tabs whose main-process session has unsaved edits (shell-close guard) */
   dirtySlidesTabs(): Array<{ id: string; webContents: WebContents }> {
     return this.tabs
@@ -292,13 +295,6 @@ export class TabManager {
   docsTabs(): Array<{ id: string; webContents: WebContents }> {
     return this.tabs
       .filter((t) => t.kind === 'docs' && t.view)
-      .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
-  }
-
-  /** markdown tabs whose renderer reports unsaved edits (shell-close guard) */
-  dirtyMarkdownTabs(): Array<{ id: string; webContents: WebContents }> {
-    return this.tabs
-      .filter((t) => t.kind === 'markdown' && t.view && markdownIsDirty(t.view.webContents.id))
       .map((t) => ({ id: t.id, webContents: t.view!.webContents }))
   }
 
@@ -317,10 +313,10 @@ export class TabManager {
         ? requestSheetsClose
         : tab.kind === 'pdf' && pdfIsDirty(tab.view.webContents.id)
           ? requestPdfClose
-          : tab.kind === 'slides' && slidesIsDirty(tab.view.webContents.id)
-            ? requestSlidesClose
-            : tab.kind === 'markdown' && markdownIsDirty(tab.view.webContents.id)
-              ? requestMarkdownClose
+          : tab.kind === 'markdown' && markdownIsDirty(tab.view.webContents.id)
+            ? requestMarkdownClose
+            : tab.kind === 'slides' && slidesIsDirty(tab.view.webContents.id)
+              ? requestSlidesClose
               : null)
     // docs dirty state lives in the renderer and needs an async query; skip the guard when clean (avoids a flash activation)
     if (!closeGuard && tab.kind === 'docs' && tab.view) {
@@ -362,8 +358,6 @@ export class TabManager {
         // issue, not something fixable from here). Detaching without destroying
         // avoids the freeze; the orphaned webContents is reclaimed when the app quits.
         teardownDocsRenderer(removed.view.webContents)
-      } else if (removed.kind === 'markdown') {
-        teardownMarkdownRenderer(removed.view.webContents)
       } else {
         removed.view.webContents.close()
       }
@@ -392,6 +386,14 @@ export class TabManager {
 
   findMarkdownTabByPath(path: string): string | undefined {
     return this.tabs.find((t) => t.kind === 'markdown' && t.filePath === path)?.id
+  }
+
+  /** the active tab's markdown view, if the active tab is markdown (markdown menu target) */
+  activeMarkdownTab(): { id: string; webContents: WebContents; filePath?: string } | undefined {
+    const tab = this.tabs.find((t) => t.id === this.activeId)
+    return tab?.kind === 'markdown' && tab.view
+      ? { id: tab.id, webContents: tab.view.webContents, filePath: tab.filePath }
+      : undefined
   }
 
   /** the active tab's pdf view, if the active tab is a pdf (pdf menu target) */
