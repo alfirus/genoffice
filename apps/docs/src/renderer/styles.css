@@ -83,6 +83,9 @@
   --docs-toast-error-bg: rgb(196 49 75 / 95%);
   --docs-toast-ink: #fff;
   --docs-toast-ok: #34c759;
+  --docs-toast-action-bg: rgb(255 255 255 / 16%);
+  --docs-toast-action-bg-hover: rgb(255 255 255 / 26%);
+  --docs-shadow-menu: 0 1px 2px rgb(0 0 0 / 10%), 0 2px 10px rgb(0 0 0 / 6%);
 
   /* content-side constants: everything painted on the white paper (including
    * the AI change highlight) keeps its light value in both themes */
@@ -7655,8 +7658,8 @@ tr > .page-gap-cut {
   padding: 3px 10px;
   border: none;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
+  background: var(--docs-toast-action-bg);
+  color: var(--docs-toast-ink);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -7664,7 +7667,7 @@ tr > .page-gap-cut {
 }
 
 .app-toast-action:hover {
-  background: rgba(255, 255, 255, 0.26);
+  background: var(--docs-toast-action-bg-hover);
 }
 
 /* body row (AI dock + content column) — the status bar spans only the content
@@ -7741,8 +7744,8 @@ tr > .page-gap-cut {
 
 .gdh-root {
   flex-shrink: 0;
-  background: var(--chrome-bg, #fff);
-  color: #202124;
+  background: var(--chrome-bg);
+  color: var(--text);
   user-select: none;
   font-family:
     'Google Sans',
@@ -7751,7 +7754,7 @@ tr > .page-gap-cut {
     BlinkMacSystemFont,
     var(--ui-cjk),
     sans-serif;
-  border-bottom: 1px solid var(--border, #e1dfdd);
+  border-bottom: 1px solid var(--border);
 }
 
 /* slim strip above the logo: holds the mac traffic lights and is the primary
@@ -7809,7 +7812,7 @@ tr > .page-gap-cut {
     BlinkMacSystemFont,
     var(--ui-cjk),
     sans-serif;
-  color: #1f1f1f;
+  color: var(--text);
   border: 1px solid transparent;
   border-radius: 4px;
   padding: 0 8px;
@@ -7827,12 +7830,12 @@ tr > .page-gap-cut {
 }
 
 .gdh-title-display:hover {
-  border-color: var(--border-strong, #c8c6c4);
-  background: var(--hover, #f3f2f1);
+  border-color: var(--border-strong);
+  background: var(--hover);
 }
 
 .gdh-title-input {
-  border-color: #1a73e8;
+  border-color: var(--color-brand-secondary);
   outline: none;
 }
 
@@ -7858,7 +7861,7 @@ tr > .page-gap-cut {
   cursor: pointer;
   font-size: 15px;
   line-height: 15px;
-  color: #444746;
+  color: var(--text-secondary);
   padding: 6px 7px;
   border-radius: 4px;
   box-sizing: border-box;
@@ -7866,7 +7869,7 @@ tr > .page-gap-cut {
 
 .gdh-menu-top:hover,
 .gdh-menu-top.open {
-  background: var(--hover, #f3f2f1);
+  background: var(--hover);
 }
 
 .gdh-menu-panel {
@@ -7875,11 +7878,10 @@ tr > .page-gap-cut {
   left: 0;
   z-index: 40;
   min-width: 220px;
-  background: #fff;
+  background: var(--surface);
   border-radius: 8px;
   box-shadow:
-    0 1px 2px rgba(60, 64, 67, 0.3),
-    0 2px 10px rgba(60, 64, 67, 0.15);
+var(--docs-shadow-menu);
   padding: 6px 0;
   margin-top: 2px;
 }
@@ -7893,14 +7895,14 @@ tr > .page-gap-cut {
   text-align: left;
   padding: 6px 14px;
   font-size: 13px;
-  color: #202124;
+  color: var(--text);
   cursor: pointer;
   white-space: nowrap;
   position: relative;
 }
 
 .gdh-menu-item:hover:not(:disabled) {
-  background: var(--hover, #f3f2f1);
+  background: var(--hover);
 }
 
 .gdh-menu-item:disabled {
@@ -7942,11 +7944,10 @@ tr > .page-gap-cut {
   left: 100%;
   z-index: 41;
   min-width: 200px;
-  background: #fff;
+  background: var(--surface);
   border-radius: 8px;
   box-shadow:
-    0 1px 2px rgba(60, 64, 67, 0.3),
-    0 2px 10px rgba(60, 64, 67, 0.15);
+var(--docs-shadow-menu);
   padding: 6px 0;
 }
 
@@ -7972,7 +7973,7 @@ tr > .page-gap-cut {
 }
 
 .gdh-icon-btn:hover {
-  background: var(--hover, #f3f2f1);
+  background: var(--hover);
 }
 
 /* Tooltip: dark pill under the button, 0.3s hover delay — native title=
@@ -8291,7 +8292,7 @@ tr > .page-gap-cut {
   font-size: 18px;
   border: 1px solid #747775;
   border-radius: 4px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .gdh-tb-menu {
@@ -8303,11 +8304,10 @@ tr > .page-gap-cut {
   min-width: 160px;
   max-height: 320px;
   overflow-y: auto;
-  background: #fff;
+  background: var(--surface);
   border-radius: 8px;
   box-shadow:
-    0 1px 2px rgba(60, 64, 67, 0.3),
-    0 2px 10px rgba(60, 64, 67, 0.15);
+var(--docs-shadow-menu);
   padding: 6px 0;
 }
 
@@ -8320,12 +8320,12 @@ tr > .page-gap-cut {
   padding: 6px 14px;
   font-size: 18px;
   cursor: pointer;
-  color: #202124;
+  color: var(--text);
   white-space: nowrap;
 }
 
 .gdh-tb-menu button:hover {
-  background: var(--hover, #f3f2f1);
+  background: var(--hover);
 }
 
 .gdh-tb-menu button.active {
@@ -8355,11 +8355,10 @@ tr > .page-gap-cut {
   left: 0;
   z-index: 40;
   margin-top: 4px;
-  background: #fff;
+  background: var(--surface);
   border-radius: 8px;
   box-shadow:
-    0 1px 2px rgba(60, 64, 67, 0.3),
-    0 2px 10px rgba(60, 64, 67, 0.15);
+var(--docs-shadow-menu);
   padding: 8px;
   width: 200px;
 }
@@ -8378,7 +8377,7 @@ tr > .page-gap-cut {
 }
 
 .gdh-color-reset:hover {
-  background: var(--hover, #f3f2f1);
+  background: var(--hover);
 }
 
 .gdh-color-swatches {
@@ -8543,7 +8542,7 @@ tr > .page-gap-cut {
 }
 
 .gdh-folder-crumb:disabled {
-  color: #202124;
+  color: var(--text);
   font-weight: 500;
   cursor: default;
 }
@@ -8609,7 +8608,7 @@ tr > .page-gap-cut {
   border-radius: 50%;
   border: none;
   background: none;
-  color: #444746;
+  color: var(--text-secondary);
   cursor: default;
   display: flex;
   align-items: center;
@@ -8646,7 +8645,7 @@ tr > .page-gap-cut {
   border-radius: 4px;
   font-size: 14px;
   color: #1f1f1f;
-  background: #fff;
+  background: var(--surface);
 }
 
 .gdh-share-invite-field .gdh-google-search:focus {
@@ -8665,7 +8664,7 @@ tr > .page-gap-cut {
   top: 50%;
   transform: translateY(-50%);
   font-size: 14px;
-  color: #444746;
+  color: var(--text-secondary);
   background: transparent;
   padding: 0;
   pointer-events: none;
@@ -8678,7 +8677,7 @@ tr > .page-gap-cut {
 .gdh-share-invite-field .gdh-google-search:not(:placeholder-shown) ~ .gdh-share-invite-label {
   top: 0;
   font-size: 12px;
-  background: #fff;
+  background: var(--surface);
   padding: 0 4px;
   margin-left: -4px;
 }
@@ -8692,7 +8691,7 @@ tr > .page-gap-cut {
   border-radius: 6px;
   padding: 6px 8px;
   font-size: 12px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .gdh-share-section {
@@ -8720,7 +8719,7 @@ tr > .page-gap-cut {
   border: none;
   border-radius: 50%;
   background: none;
-  color: #444746;
+  color: var(--text-secondary);
   cursor: default;
   display: flex;
   align-items: center;
@@ -8780,7 +8779,7 @@ tr > .page-gap-cut {
 }
 
 .gdh-share-role-fixed {
-  color: #444746;
+  color: var(--text-secondary);
   font-size: 14px;
   padding-right: 8px;
   margin-left: auto;
@@ -8798,7 +8797,7 @@ tr > .page-gap-cut {
   gap: 8px;
   border: none;
   background: none;
-  color: #444746;
+  color: var(--text-secondary);
   font-size: 14px;
   font-family: inherit;
   padding: 6px 8px;
@@ -8808,7 +8807,7 @@ tr > .page-gap-cut {
 }
 
 .gdh-share-role-btn:hover {
-  background: var(--hover, #f3f2f1);
+  background: var(--hover);
 }
 
 .gdh-share-role-menu {
@@ -8863,7 +8862,7 @@ tr > .page-gap-cut {
 
 .gdh-share-general-icon.restricted {
   background: #f1f3f4;
-  color: #444746;
+  color: var(--text-secondary);
 }
 
 .gdh-share-general-text {
@@ -8894,7 +8893,7 @@ tr > .page-gap-cut {
 }
 
 .gdh-share-general-select:hover {
-  background: var(--hover, #f3f2f1);
+  background: var(--hover);
   border-radius: 4px;
 }
 
