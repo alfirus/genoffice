@@ -179,6 +179,10 @@ export interface DesktopApi {
       lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
     ) => void,
   ): () => void
+  /** current theme setting from the shell */
+  getTheme(): Promise<'light' | 'dark' | 'system'>
+  /** theme changed from the shell home page */
+  onThemeChanged(handler: (theme: string) => void): () => void
   openDocx(): Promise<OpenFileResult | null>
   openDocxPath(path: string): Promise<OpenFileResult | null>
   /** mark the renderer ready and consume a file passed by Finder/Explorer at launch */
@@ -298,6 +302,8 @@ export interface DesktopApi {
   /** Close guard chose "Save": main process asks the renderer to run the full save flow */
   onCloseSaveRequest(handler: () => void): () => void
   reportCloseSaveResult(ok: boolean): void
+  /** Report view menu state to the shell (for menu checkbox state updates) */
+  reportViewMenuState(state: { aiSidebar: boolean; darkCanvas: boolean }): void
 
   // ---- Google Docs integration ----
 
@@ -311,7 +317,9 @@ export interface DesktopApi {
   /** exports the Google Doc to .docx and opens it through the normal open pipeline */
   googleImportDoc(
     fileId: string,
-  ): Promise<GoogleApiResult<OpenFileResult & { googleFileId: string; googleWebViewLink: string | null }>>
+  ): Promise<
+    GoogleApiResult<OpenFileResult & { googleFileId: string; googleWebViewLink: string | null }>
+  >
   /** webViewLink + name lookup for a fileId already known this session */
   googleGetFileMeta(
     fileId: string,
@@ -354,7 +362,10 @@ export interface DesktopApi {
   ): Promise<GoogleApiResult<GooglePermissionSummary>>
   googleRemovePermission(fileId: string, permissionId: string): Promise<GoogleApiResult<null>>
   /** general access ("anyone with the link"); role=null revokes it */
-  googleSetAnyoneAccess(fileId: string, role: 'reader' | 'writer' | null): Promise<GoogleApiResult<null>>
+  googleSetAnyoneAccess(
+    fileId: string,
+    role: 'reader' | 'writer' | null,
+  ): Promise<GoogleApiResult<null>>
   googleOpenExternal(url: string): void
 
   /** default destination folder for "Send to Google Docs" */
@@ -363,7 +374,10 @@ export interface DesktopApi {
   /** folders under parentId (omit/undefined = My Drive root), for the folder picker */
   googleListFolders(parentId?: string): Promise<GoogleApiResult<GoogleFolderSummary[]>>
   /** move an existing Drive file to a different folder */
-  googleMoveFile(fileId: string, folderId: string): Promise<GoogleApiResult<{ id: string; parents: string[] }>>
+  googleMoveFile(
+    fileId: string,
+    folderId: string,
+  ): Promise<GoogleApiResult<{ id: string; parents: string[] }>>
   /** duplicate an existing Drive file (Make a copy); folderId places the copy
    *  directly in a Drive folder instead of wherever the source file lives */
   googleCopyFile(
@@ -373,5 +387,8 @@ export interface DesktopApi {
   ): Promise<GoogleApiResult<{ id: string; name: string; webViewLink: string }>>
   /** rename an existing Drive file (GDocsHeader title commit, once the doc is
    *  linked to Google and app-writable) */
-  googleRenameFile(fileId: string, name: string): Promise<GoogleApiResult<{ id: string; name: string }>>
+  googleRenameFile(
+    fileId: string,
+    name: string,
+  ): Promise<GoogleApiResult<{ id: string; name: string }>>
 }

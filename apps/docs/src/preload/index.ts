@@ -20,6 +20,12 @@ const api: DesktopApi = {
     ipcRenderer.on('app:language-changed', listener)
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },
+  getTheme: () => ipcRenderer.invoke('home:get-theme'),
+  onThemeChanged: (handler) => {
+    const listener = (_event: IpcRendererEvent, theme: string) => handler(theme)
+    ipcRenderer.on('app:theme-changed', listener)
+    return () => ipcRenderer.removeListener('app:theme-changed', listener)
+  },
   openDocx: () => ipcRenderer.invoke('docs:open'),
   openDocxPath: (path: string) => ipcRenderer.invoke('docs:open-path', path),
   consumePendingOpenDocx: () => ipcRenderer.invoke('docs:consume-pending-open'),
@@ -113,6 +119,8 @@ const api: DesktopApi = {
     return () => ipcRenderer.removeListener('docs:close-save-request', listener)
   },
   reportCloseSaveResult: (ok: boolean) => ipcRenderer.send('docs:close-save-result', ok === true),
+  reportViewMenuState: (state: { aiSidebar: boolean; darkCanvas: boolean }) =>
+    ipcRenderer.send('docs:view-menu-state', state),
 
   googleAuthStatus: () => ipcRenderer.invoke('google:auth-status'),
   googleSignIn: () => ipcRenderer.invoke('google:sign-in'),
