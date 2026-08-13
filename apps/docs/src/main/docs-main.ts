@@ -3294,17 +3294,22 @@ function registerGoogleIpc(): void {
       // Use the Drive doc's real name for the on-disk filename (and thus the
       // title shown in the editor/header) instead of the opaque fileId; keep
       // a Date.now() suffix so re-imports don't collide with a stale copy.
-      const safeName = (meta.ok ? meta.data.name : fileId)
-        .replace(/[/\\?%*:|"<>]/g, '-')
-        .trim()
-        .slice(0, 150) || fileId
+      const safeName =
+        (meta.ok ? meta.data.name : fileId)
+          .replace(/[/\\?%*:|"<>]/g, '-')
+          .trim()
+          .slice(0, 150) || fileId
       const filePath = join(dir, `${safeName}-${Date.now()}.docx`)
       await atomicWriteFile(filePath, Buffer.from(exported.data))
       const opened = await loadDocx(filePath, event.sender.id)
       if (!opened) return { ok: false, error: 'failed to open imported document' }
       return {
         ok: true,
-        data: { ...opened, googleFileId: fileId, googleWebViewLink: meta.ok ? meta.data.webViewLink : null },
+        data: {
+          ...opened,
+          googleFileId: fileId,
+          googleWebViewLink: meta.ok ? meta.data.webViewLink : null,
+        },
       }
     } catch (err) {
       return googleErr(err)
@@ -3358,7 +3363,10 @@ function registerGoogleIpc(): void {
 
   ipcMain.handle(
     'google:set-settings',
-    async (_event, settings: { defaultFolderId: string | null; defaultFolderName: string | null }) => {
+    async (
+      _event,
+      settings: { defaultFolderId: string | null; defaultFolderName: string | null },
+    ) => {
       try {
         await writeGoogleSettings({
           defaultFolderId: settings?.defaultFolderId ?? null,
@@ -3446,7 +3454,12 @@ function registerGoogleIpc(): void {
 
   ipcMain.handle(
     'google:add-permission',
-    async (_event, fileId: string, emailAddress: string, role: 'reader' | 'commenter' | 'writer') => {
+    async (
+      _event,
+      fileId: string,
+      emailAddress: string,
+      role: 'reader' | 'commenter' | 'writer',
+    ) => {
       try {
         const result = await addPermission(fileId, emailAddress, role)
         return result.ok ? { ok: true, data: result.data } : { ok: false, error: result.error }

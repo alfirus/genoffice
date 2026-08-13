@@ -57,7 +57,9 @@ export function GoogleCopyModal({
         />
 
         <div className="gdh-copy-folder-row">
-          <span className="gdh-copy-folder-label">Folder: {folder ? `/${folder.name}` : 'My Drive'}</span>
+          <span className="gdh-copy-folder-label">
+            Folder: {folder ? `/${folder.name}` : 'My Drive'}
+          </span>
           <button type="button" className="btn-ghost" onClick={() => setShowFolderPicker(true)}>
             Choose folder…
           </button>

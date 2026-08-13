@@ -100,7 +100,11 @@ export function GDocsMenuBar({ menus }: { menus: MenuSpec[] }) {
           {openKey === m.key && (
             <div className="gdh-menu-panel">
               {m.items.map((item, i) => (
-                <MenuItemRow key={item.label ?? `d${i}`} item={item} onDone={() => setOpenKey(null)} />
+                <MenuItemRow
+                  key={item.label ?? `d${i}`}
+                  item={item}
+                  onDone={() => setOpenKey(null)}
+                />
               ))}
             </div>
           )}

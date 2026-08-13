@@ -139,7 +139,12 @@ export function GoogleFolderPicker({
         <div className="modal-actions gdh-folder-actions">
           <span className="gdh-folder-actions-left">
             {mode === 'set-default' && onClearDefault && (
-              <button type="button" className="btn-ghost" disabled={busy} onClick={() => void clearDefault()}>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={busy}
+                onClick={() => void clearDefault()}
+              >
                 Clear default
               </button>
             )}
@@ -148,7 +153,12 @@ export function GoogleFolderPicker({
             <button type="button" className="btn-ghost" onClick={onClose}>
               Cancel
             </button>
-            <button type="button" className="btn-primary" disabled={busy} onClick={() => void confirm()}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={busy}
+              onClick={() => void confirm()}
+            >
               {busy
                 ? mode === 'move'
                   ? 'Moving…'

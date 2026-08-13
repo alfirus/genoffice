@@ -105,9 +105,16 @@ export function GoogleImportModal({
 
         {status === 'signed-out' && (
           <div className="gdh-google-signin">
-            <p className="gdh-google-status">Sign in to your Google account to import a document.</p>
+            <p className="gdh-google-status">
+              Sign in to your Google account to import a document.
+            </p>
             {error && <p className="gdh-google-error">{error}</p>}
-            <button type="button" className="btn-primary" disabled={loading} onClick={() => void signIn()}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={loading}
+              onClick={() => void signIn()}
+            >
               {loading ? 'Opening browser…' : 'Sign in with Google'}
             </button>
           </div>
@@ -145,7 +152,9 @@ export function GoogleImportModal({
                     <span className="gdh-google-doc-time">
                       {new Date(d.modifiedTime).toLocaleDateString()}
                     </span>
-                    {importingId === d.id && <span className="gdh-google-doc-loading">Importing…</span>}
+                    {importingId === d.id && (
+                      <span className="gdh-google-doc-loading">Importing…</span>
+                    )}
                   </button>
                 </li>
               ))}

@@ -10,9 +10,8 @@ vi.mock('electron', () => ({
   shell: { openExternal: vi.fn() },
 }))
 
-const { buildMultipartUploadBody, buildMoveParentsQuery, buildCopyFileBody } = await import(
-  '../src/main/google-drive'
-)
+const { buildMultipartUploadBody, buildMoveParentsQuery, buildCopyFileBody } =
+  await import('../src/main/google-drive')
 
 function decode(bytes: Uint8Array): string {
   return new TextDecoder().decode(bytes)

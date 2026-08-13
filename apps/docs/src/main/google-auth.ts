@@ -178,14 +178,14 @@ export async function runGoogleAuthFlow(): Promise<
       const error = url.searchParams.get('error')
       res.writeHead(200, { 'Content-Type': 'text/html' })
       if (error || !code || returnedState !== state) {
-        res.end('<html><body>Sign-in failed. You can close this tab and return to the app.</body></html>')
+        res.end(
+          '<html><body>Sign-in failed. You can close this tab and return to the app.</body></html>',
+        )
         server.close()
         resolve({ ok: false, error: error ?? 'invalid response from Google' })
         return
       }
-      res.end(
-        '<html><body>Signed in. You can close this tab and return to the app.</body></html>',
-      )
+      res.end('<html><body>Signed in. You can close this tab and return to the app.</body></html>')
       server.close()
       void (async () => {
         try {

@@ -335,9 +335,9 @@ export function App() {
   const [showGoogleImport, setShowGoogleImport] = useState(false)
   const [showGoogleShare, setShowGoogleShare] = useState(false)
   const [showGoogleCopy, setShowGoogleCopy] = useState(false)
-  const [googleFolderPickerMode, setGoogleFolderPickerMode] = useState<'set-default' | 'move' | null>(
-    null,
-  )
+  const [googleFolderPickerMode, setGoogleFolderPickerMode] = useState<
+    'set-default' | 'move' | null
+  >(null)
   /** fileId the folder picker moves when in 'move' mode — the current doc's
    *  googleFileId by default, or a freshly-copied file's id from "Make a
    *  copy…"'s "Move to…" toast action. */
@@ -1068,7 +1068,10 @@ export function App() {
   }> => {
     const bytes = await buildDocBytes(fileCtxRef.current)
     if (!bytes) throw new Error('nothing to send')
-    const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+    const buffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer
     const name = googleTitleOverride ?? (doc?.fileName ?? 'Untitled').replace(/\.docx$/i, '')
     const result = googleFileId
       ? await window.desktop.googleUpdateDoc(googleFileId, buffer, name)
@@ -1104,7 +1107,10 @@ export function App() {
       showToast(
         text,
         'success',
-        { label: 'Open in Google Docs', onClick: () => window.desktop.googleOpenExternal(webViewLink) },
+        {
+          label: 'Open in Google Docs',
+          onClick: () => window.desktop.googleOpenExternal(webViewLink),
+        },
         {
           label: 'Move to…',
           onClick: () => {
@@ -1114,7 +1120,10 @@ export function App() {
         },
       )
       if (folderCleared) {
-        showToast('Default Drive folder was deleted — cleared and sent to My Drive instead', 'error')
+        showToast(
+          'Default Drive folder was deleted — cleared and sent to My Drive instead',
+          'error',
+        )
       }
     } catch (err) {
       showToast(`Send to Google Docs failed: ${String(err)}`, 'error')
@@ -1138,7 +1147,10 @@ export function App() {
       showToast(
         `Now editing "${name}"`,
         'success',
-        { label: 'Open in Google Docs', onClick: () => window.desktop.googleOpenExternal(result.data.webViewLink) },
+        {
+          label: 'Open in Google Docs',
+          onClick: () => window.desktop.googleOpenExternal(result.data.webViewLink),
+        },
         {
           label: 'Move to…',
           onClick: () => {
@@ -3028,7 +3040,9 @@ export function App() {
             }}
             googleFileId={googleFileId}
             googleWritable={googleWritable}
-            displayTitle={googleTitleOverride ?? doc?.fileName?.replace(/\.docx$/i, '') ?? 'Untitled'}
+            displayTitle={
+              googleTitleOverride ?? doc?.fileName?.replace(/\.docx$/i, '') ?? 'Untitled'
+            }
             onTitleCommit={(title) => setGoogleTitleOverride(title)}
             onImportFromGoogle={() => setShowGoogleImport(true)}
             onSendToGoogle={() => void sendToGoogleWithToast()}
@@ -3055,14 +3069,13 @@ export function App() {
       })()}
 
       {showGoogleImport && (
-        <GoogleImportModal
-          onClose={() => setShowGoogleImport(false)}
-          onImport={importFromGoogle}
-        />
+        <GoogleImportModal onClose={() => setShowGoogleImport(false)} onImport={importFromGoogle} />
       )}
       {showGoogleCopy && (
         <GoogleCopyModal
-          docTitle={googleTitleOverride ?? doc?.fileName?.replace(/\.docx$/i, '') ?? 'Untitled document'}
+          docTitle={
+            googleTitleOverride ?? doc?.fileName?.replace(/\.docx$/i, '') ?? 'Untitled document'
+          }
           onClose={() => setShowGoogleCopy(false)}
           onMakeCopy={makeGoogleCopy}
         />
@@ -3071,7 +3084,9 @@ export function App() {
         <GoogleSharePopover
           fileId={googleWritable ? googleFileId : null}
           webViewLink={googleWebViewLink}
-          docName={googleTitleOverride ?? doc?.fileName?.replace(/\.docx$/i, '') ?? 'Untitled document'}
+          docName={
+            googleTitleOverride ?? doc?.fileName?.replace(/\.docx$/i, '') ?? 'Untitled document'
+          }
           onClose={() => setShowGoogleShare(false)}
           onSaveToGoogleFirst={async () => {
             await sendToGoogle()

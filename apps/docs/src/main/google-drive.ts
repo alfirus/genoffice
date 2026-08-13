@@ -9,8 +9,7 @@ const DRIVE_UPLOAD_FILES = 'https://www.googleapis.com/upload/drive/v3/files'
 const DRIVE_PERMISSIONS = (fileId: string) =>
   `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}/permissions`
 
-const DOCX_MIME =
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 const GDOC_MIME = 'application/vnd.google-apps.document'
 
 export interface GoogleDoc {
@@ -80,7 +79,10 @@ export async function getGoogleFileMeta(
     `${DRIVE_FILES}/${encodeURIComponent(fileId)}?${params.toString()}`,
   )
   if (!result.ok) return result
-  return { ok: true, data: (await result.data.json()) as { id: string; name: string; webViewLink: string } }
+  return {
+    ok: true,
+    data: (await result.data.json()) as { id: string; name: string; webViewLink: string },
+  }
 }
 
 /** Export a Google Doc to .docx bytes. */
@@ -125,9 +127,7 @@ function newBoundary(): string {
 /** Folders under `parentId` (defaults to "root" / My Drive), name-sorted, for
  *  the destination-folder picker. Only folders the user can see are returned
  *  — trashed folders are excluded. */
-export async function listFolders(
-  parentId?: string,
-): Promise<DriveResult<GoogleFolder[]>> {
+export async function listFolders(parentId?: string): Promise<DriveResult<GoogleFolder[]>> {
   const parent = parentId || 'root'
   const params = new URLSearchParams({
     q: `mimeType='application/vnd.google-apps.folder' and trashed=false and '${parent}' in parents`,
@@ -301,7 +301,12 @@ export async function copyFile(
   if (!result.ok) return result
   return {
     ok: true,
-    data: (await result.data.json()) as { id: string; name: string; webViewLink: string; parents?: string[] },
+    data: (await result.data.json()) as {
+      id: string
+      name: string
+      webViewLink: string
+      parents?: string[]
+    },
   }
 }
 
@@ -310,14 +315,11 @@ export async function renameFile(
   fileId: string,
   name: string,
 ): Promise<DriveResult<{ id: string; name: string }>> {
-  const result = await authedFetch(
-    `${DRIVE_FILES}/${encodeURIComponent(fileId)}?fields=id,name`,
-    {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
-    },
-  )
+  const result = await authedFetch(`${DRIVE_FILES}/${encodeURIComponent(fileId)}?fields=id,name`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
   if (!result.ok) return result
   return { ok: true, data: (await result.data.json()) as { id: string; name: string } }
 }
@@ -348,14 +350,11 @@ export async function setAnyoneAccess(
   if (!perms.ok) return perms
   const anyone = perms.data.find((p) => p.type === 'anyone')
   const result = anyone
-    ? await authedFetch(
-        `${DRIVE_PERMISSIONS(fileId)}/${encodeURIComponent(anyone.id)}?fields=id`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role }),
-        },
-      )
+    ? await authedFetch(`${DRIVE_PERMISSIONS(fileId)}/${encodeURIComponent(anyone.id)}?fields=id`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      })
     : await authedFetch(`${DRIVE_PERMISSIONS(fileId)}?fields=id`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

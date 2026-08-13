@@ -16,15 +16,25 @@ const { refreshAccessToken, tokenNeedsRefresh } = await import('../src/main/goog
 describe('tokenNeedsRefresh', () => {
   it('is true once within the refresh skew window', () => {
     const now = Date.now()
-    expect(tokenNeedsRefresh({ accessToken: 'a', refreshToken: 'r', expiresAt: now + 30_000, scope: '' })).toBe(
-      true,
-    )
+    expect(
+      tokenNeedsRefresh({
+        accessToken: 'a',
+        refreshToken: 'r',
+        expiresAt: now + 30_000,
+        scope: '',
+      }),
+    ).toBe(true)
   })
 
   it('is false with plenty of time left', () => {
     const now = Date.now()
     expect(
-      tokenNeedsRefresh({ accessToken: 'a', refreshToken: 'r', expiresAt: now + 10 * 60_000, scope: '' }),
+      tokenNeedsRefresh({
+        accessToken: 'a',
+        refreshToken: 'r',
+        expiresAt: now + 10 * 60_000,
+        scope: '',
+      }),
     ).toBe(false)
   })
 

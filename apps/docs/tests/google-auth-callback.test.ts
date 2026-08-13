@@ -62,7 +62,9 @@ describe('runGoogleAuthFlow callback', () => {
     await vi.waitFor(() => {
       expect((shell.openExternal as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(0)
     })
-    const authUrl = new URL((shell.openExternal as ReturnType<typeof vi.fn>).mock.calls[0][0] as string)
+    const authUrl = new URL(
+      (shell.openExternal as ReturnType<typeof vi.fn>).mock.calls[0][0] as string,
+    )
     const redirectUri = authUrl.searchParams.get('redirect_uri')!
     const state = authUrl.searchParams.get('state')!
     expect(redirectUri).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/callback$/)

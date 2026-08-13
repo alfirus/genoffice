@@ -7802,7 +7802,13 @@ tr > .page-gap-cut {
 .gdh-title-input {
   font-size: 25px;
   font-weight: 400;
-  font-family: 'Google Sans', Roboto, -apple-system, BlinkMacSystemFont, var(--ui-cjk), sans-serif;
+  font-family:
+    'Google Sans',
+    Roboto,
+    -apple-system,
+    BlinkMacSystemFont,
+    var(--ui-cjk),
+    sans-serif;
   color: #1f1f1f;
   border: 1px solid transparent;
   border-radius: 4px;
@@ -8038,7 +8044,13 @@ tr > .page-gap-cut {
   color: inherit;
   font-size: 14px;
   font-weight: 500;
-  font-family: 'Google Sans', Roboto, -apple-system, BlinkMacSystemFont, var(--ui-cjk), sans-serif;
+  font-family:
+    'Google Sans',
+    Roboto,
+    -apple-system,
+    BlinkMacSystemFont,
+    var(--ui-cjk),
+    sans-serif;
   padding: 0 12px;
   border-radius: 20px 0 0 20px;
   cursor: pointer;
@@ -8570,7 +8582,13 @@ tr > .page-gap-cut {
   border-radius: 28px;
   box-shadow: 0 4px 8px 3px rgba(0, 0, 0, 0.15);
   position: relative;
-  font-family: 'Google Sans', Roboto, -apple-system, BlinkMacSystemFont, var(--ui-cjk), sans-serif;
+  font-family:
+    'Google Sans',
+    Roboto,
+    -apple-system,
+    BlinkMacSystemFont,
+    var(--ui-cjk),
+    sans-serif;
 }
 
 .gdh-share-card h2 {

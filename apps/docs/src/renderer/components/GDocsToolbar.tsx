@@ -242,7 +242,12 @@ export function GDocsToolbar({
   const applyStyle = (key: string) => {
     if (sub || !canEdit) return
     if (key === 'p') editor.chain().focus().setNode('docParagraph').run()
-    else editor.chain().focus().setNode('docHeading', { level: Number(key.slice(1)) }).run()
+    else
+      editor
+        .chain()
+        .focus()
+        .setNode('docHeading', { level: Number(key.slice(1)) })
+        .run()
     setDropdown(null)
   }
 
@@ -329,7 +334,8 @@ export function GDocsToolbar({
       const el = groupRefs.current[n - 1]
       if (!el) continue
       const collapsedReserve = n < GROUP_IDS.length ? MORE_BUTTON_RESERVE : 0
-      const required = el.offsetLeft + el.offsetWidth + 18 /* pill right padding */ + collapsedReserve
+      const required =
+        el.offsetLeft + el.offsetWidth + 18 /* pill right padding */ + collapsedReserve
       if (required <= available) break
     }
     setVisibleCount(Math.max(1, n))
@@ -367,8 +373,22 @@ export function GDocsToolbar({
   const groupContents: React.ReactNode[] = [
     // 0: undo / redo
     <>
-      {btn('undo', <IconUndoM />, 'Undo (⌘Z)', () => editor.chain().focus().undo().run(), false, !hasDoc)}
-      {btn('redo', <IconRedoM />, 'Redo (⌘⇧Z)', () => editor.chain().focus().redo().run(), false, !hasDoc)}
+      {btn(
+        'undo',
+        <IconUndoM />,
+        'Undo (⌘Z)',
+        () => editor.chain().focus().undo().run(),
+        false,
+        !hasDoc,
+      )}
+      {btn(
+        'redo',
+        <IconRedoM />,
+        'Redo (⌘⇧Z)',
+        () => editor.chain().focus().redo().run(),
+        false,
+        !hasDoc,
+      )}
     </>,
 
     // 1: bold / italic / underline
@@ -529,13 +549,29 @@ export function GDocsToolbar({
           </div>
         )}
       </div>
-      {btn('clear', <IconClearFormat />, 'Clear formatting (⌘\\)', () => chain()?.unsetAllMarks().run())}
+      {btn('clear', <IconClearFormat />, 'Clear formatting (⌘\\)', () =>
+        chain()?.unsetAllMarks().run(),
+      )}
     </>,
 
     // 6: lists / indent
     <>
-      {btn('bullets', <IconBullets />, 'Bulleted list', () => toggleList('bullet'), fs.listBullet, !!sub)}
-      {btn('numbered', <IconNumbered />, 'Numbered list', () => toggleList('ordered'), fs.listOrdered, !!sub)}
+      {btn(
+        'bullets',
+        <IconBullets />,
+        'Bulleted list',
+        () => toggleList('bullet'),
+        fs.listBullet,
+        !!sub,
+      )}
+      {btn(
+        'numbered',
+        <IconNumbered />,
+        'Numbered list',
+        () => toggleList('ordered'),
+        fs.listOrdered,
+        !!sub,
+      )}
       {btn('outdent', <IconIndentDec />, 'Decrease indent', () => changeIndent(-1), false, !!sub)}
       {btn('indent', <IconIndentInc />, 'Increase indent', () => changeIndent(1), false, !!sub)}
     </>,
