@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { execSync, spawn } from 'node:child_process'
 import {
   copyFileSync,
   cpSync,
@@ -30,17 +30,19 @@ import menuPptxIcon1x from './assets/menu-pptx.png?asset'
 import menuPptxIcon2x from './assets/menu-pptx@2x.png?asset'
 import menuPdfIcon1x from './assets/menu-pdf.png?asset'
 import menuPdfIcon2x from './assets/menu-pdf@2x.png?asset'
-import menuMarkdownIcon1x from './assets/menu-markdown.png?asset'
-import menuMarkdownIcon2x from './assets/menu-markdown@2x.png?asset'
+import menuMdIcon1x from './assets/menu-md.png?asset'
+import menuMdIcon2x from './assets/menu-md@2x.png?asset'
 import menuHomeIcon1x from './assets/menu-home.png?asset'
 import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
 import {
+  DEFAULT_SAVE_DIR_KEY,
   appMenuLabels,
   contextMenuLabels,
   editMenuTemplate,
   installContextMenu,
   installNavigationGuard,
+  isUsableSaveDir,
   showOpenDialogWithMemory,
   showSaveDialogWithMemory,
   windowMenuTemplate,
@@ -130,8 +132,12 @@ import {
 } from '../../../pdf/src/main/pdf-main'
 import {
   configureMarkdownRuntime,
-  buildMarkdownMenu,
+  markdownFileRenamed,
   requestMarkdownClose,
+  requestMarkdownSave,
+  sendMarkdownExportRequest,
+  setMarkdownDocxExportedHook,
+  setMarkdownFileSavedHook,
 } from '../../../markdown/src/main/markdown-main'
 import type {
   AccountLoginEvent,
@@ -276,9 +282,13 @@ function currentTheme(): UiTheme {
 
 // ---- first-run onboarding ----
 // The GenTeam community page opened from the onboarding's second slide.
-// Stable short link served by the genspark.ai site; it 302s to the tokened
+// Stable short link served by the genoffice.ai site; it 302s to the tokened
 // invite link, which stays out of this repo and rotates server-side.
-const GENTEAM_URL = 'https://www.genspark.ai/genoffice/join'
+const GENTEAM_URL = 'https://genoffice.ai/join'
+
+// Genspark credit-usage page opened from the account menu's credits row.
+// Kept main-side so the renderer never supplies the URL.
+const CREDIT_USAGE_URL = 'https://www.genspark.ai/credit-usage'
 
 const tMain = createI18n({
   zh: {
@@ -290,8 +300,10 @@ const tMain = createI18n({
     untitledDoc: '未命名文档',
     untitledDeck: '未命名演示文稿',
     untitledMarkdown: '未命名 Markdown',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: '导出为 PDF…',
+    menuOpenInDocs: '转换为 Docs 文档并打开',
     menuOpen: '打开…',
     menuSave: '保存',
     menuSaveAs: '另存为…',
@@ -305,12 +317,8 @@ const tMain = createI18n({
     filterWord: 'Word 文档',
     filterExcel: 'Excel 工作簿',
     filterPpt: 'PowerPoint 演示文稿',
-    filterPdf: 'PDF 文档',
     filterMarkdown: 'Markdown 文档',
-    docOpenMsg: '打开 .doc 文件',
-    docOpenDetail: '此文件将以纯文本形式打开，格式将不会保留。另存为 .docx 可获得完整编辑支持。',
-    docOpenBtnOpen: '继续打开',
-    docOpenFailedMsg: '打开 .doc 文件失败',
+    filterPdf: 'PDF 文档',
     errBadArgs: '参数无效',
     errBadName: '文件名不合法',
     errMissing: '文件不存在',
@@ -333,6 +341,8 @@ const tMain = createI18n({
     pdfDocxFailedMsg: '导出为 Word 失败',
     pdfDocxNoCliMsg: '无法登录 Genspark：缺少必需组件（gsk），请重新安装应用。',
     pdfDocxBusyMsg: '正在转换中，请等待当前导出完成。',
+    dlgPickSaveDir: '选择默认保存位置',
+    errSaveDirUnusable: '所选文件夹不可写，无法用作默认保存位置',
   },
   en: {
     menuFile: 'File',
@@ -343,8 +353,10 @@ const tMain = createI18n({
     untitledDoc: 'Untitled Document',
     untitledDeck: 'Untitled Presentation',
     untitledMarkdown: 'Untitled Markdown',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Export as PDF…',
+    menuOpenInDocs: 'Convert and Open in Docs',
     menuOpen: 'Open…',
     menuSave: 'Save',
     menuSaveAs: 'Save As…',
@@ -358,13 +370,8 @@ const tMain = createI18n({
     filterWord: 'Word Documents',
     filterExcel: 'Excel Workbooks',
     filterPpt: 'PowerPoint Presentations',
-    filterPdf: 'PDF Documents',
     filterMarkdown: 'Markdown Documents',
-    docOpenMsg: 'Open .doc file',
-    docOpenDetail:
-      'This file will be opened as plain text. Formatting will not be preserved. Save as .docx for full editing support.',
-    docOpenBtnOpen: 'Open',
-    docOpenFailedMsg: 'Failed to open .doc file',
+    filterPdf: 'PDF Documents',
     errBadArgs: 'Invalid arguments',
     errBadName: 'Invalid file name',
     errMissing: 'File not found',
@@ -390,6 +397,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Cannot sign in to Genspark: a required component (gsk) is missing. Please reinstall the app.',
     pdfDocxBusyMsg: 'A Word export is already in progress. Please wait for it to finish.',
+    dlgPickSaveDir: 'Choose Default Save Location',
+    errSaveDirUnusable:
+      'The selected folder is not writable and cannot be used as the default save location',
   },
   ja: {
     menuFile: 'ファイル',
@@ -400,8 +410,10 @@ const tMain = createI18n({
     untitledDoc: '無題のドキュメント',
     untitledDeck: '無題のプレゼンテーション',
     untitledMarkdown: '無題の Markdown',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'PDF として書き出す…',
+    menuOpenInDocs: 'Docs 文書に変換して開く',
     menuOpen: '開く…',
     menuSave: '保存',
     menuSaveAs: '名前を付けて保存…',
@@ -415,13 +427,8 @@ const tMain = createI18n({
     filterWord: 'Word 文書',
     filterExcel: 'Excel ブック',
     filterPpt: 'PowerPoint プレゼンテーション',
-    filterPdf: 'PDF ドキュメント',
     filterMarkdown: 'Markdown ドキュメント',
-    docOpenMsg: '.doc ファイルを開く',
-    docOpenDetail:
-      'このファイルはプレーンテキストとして開かれます。書式は保持されません。完全な編集サポートには .docx として保存してください。',
-    docOpenBtnOpen: '開く',
-    docOpenFailedMsg: '.doc ファイルを開けませんでした',
+    filterPdf: 'PDF ドキュメント',
     errBadArgs: '引数が無効です',
     errBadName: 'ファイル名が無効です',
     errMissing: 'ファイルが見つかりません',
@@ -447,6 +454,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Genspark にサインインできません：必要なコンポーネント（gsk）が見つかりません。アプリを再インストールしてください。',
     pdfDocxBusyMsg: 'Word への書き出しが進行中です。完了までお待ちください。',
+    dlgPickSaveDir: '既定の保存先を選択',
+    errSaveDirUnusable:
+      '選択したフォルダーは書き込みできないため、既定の保存先として使用できません',
   },
   ko: {
     menuFile: '파일',
@@ -457,8 +467,10 @@ const tMain = createI18n({
     untitledDoc: '제목 없는 문서',
     untitledDeck: '제목 없는 프레젠테이션',
     untitledMarkdown: '제목 없는 Markdown',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'PDF로 내보내기…',
+    menuOpenInDocs: 'Docs 문서로 변환하여 열기',
     menuOpen: '열기…',
     menuSave: '저장',
     menuSaveAs: '다른 이름으로 저장…',
@@ -472,13 +484,8 @@ const tMain = createI18n({
     filterWord: 'Word 문서',
     filterExcel: 'Excel 통합 문서',
     filterPpt: 'PowerPoint 프레젠테이션',
-    filterPdf: 'PDF 문서',
     filterMarkdown: 'Markdown 문서',
-    docOpenMsg: '.doc 파일 열기',
-    docOpenDetail:
-      '이 파일은 일반 텍스트로 열립니다. 서식은 유지되지 않습니다. 전체 편집 지원을 위해 .docx로 저장하세요.',
-    docOpenBtnOpen: '열기',
-    docOpenFailedMsg: '.doc 파일을 열지 못했습니다',
+    filterPdf: 'PDF 문서',
     errBadArgs: '잘못된 인수입니다',
     errBadName: '파일 이름이 잘못되었습니다',
     errMissing: '파일을 찾을 수 없습니다',
@@ -504,6 +511,8 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Genspark에 로그인할 수 없습니다. 필수 구성 요소(gsk)가 없습니다. 앱을 다시 설치해 주세요.',
     pdfDocxBusyMsg: 'Word 내보내기가 이미 진행 중입니다. 완료될 때까지 기다려 주세요.',
+    dlgPickSaveDir: '기본 저장 위치 선택',
+    errSaveDirUnusable: '선택한 폴더에 쓸 수 없어 기본 저장 위치로 사용할 수 없습니다',
   },
   fr: {
     menuFile: 'Fichier',
@@ -514,8 +523,10 @@ const tMain = createI18n({
     untitledDoc: 'Document sans titre',
     untitledDeck: 'Présentation sans titre',
     untitledMarkdown: 'Markdown sans titre',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Exporter en PDF…',
+    menuOpenInDocs: 'Convertir et ouvrir dans Docs',
     menuOpen: 'Ouvrir…',
     menuSave: 'Enregistrer',
     menuSaveAs: 'Enregistrer sous…',
@@ -529,13 +540,8 @@ const tMain = createI18n({
     filterWord: 'Documents Word',
     filterExcel: 'Classeurs Excel',
     filterPpt: 'Présentations PowerPoint',
-    filterPdf: 'Documents PDF',
     filterMarkdown: 'Documents Markdown',
-    docOpenMsg: 'Ouvrir le fichier .doc',
-    docOpenDetail:
-      'Ce fichier sera ouvert en texte brut. La mise en forme ne sera pas conservée. Enregistrez en .docx pour un support complet.',
-    docOpenBtnOpen: 'Ouvrir',
-    docOpenFailedMsg: "Impossible d'ouvrir le fichier .doc",
+    filterPdf: 'Documents PDF',
     errBadArgs: 'Arguments non valides',
     errBadName: 'Nom de fichier non valide',
     errMissing: 'Fichier introuvable',
@@ -561,6 +567,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       "Connexion à Genspark impossible : un composant requis (gsk) est manquant. Veuillez réinstaller l'application.",
     pdfDocxBusyMsg: "Un export en Word est déjà en cours. Veuillez attendre qu'il se termine.",
+    dlgPickSaveDir: "Choisir l'emplacement d'enregistrement par défaut",
+    errSaveDirUnusable:
+      "Le dossier sélectionné n'est pas accessible en écriture et ne peut pas servir d'emplacement d'enregistrement par défaut",
   },
   de: {
     menuFile: 'Datei',
@@ -571,8 +580,10 @@ const tMain = createI18n({
     untitledDoc: 'Unbenanntes Dokument',
     untitledDeck: 'Unbenannte Präsentation',
     untitledMarkdown: 'Unbenanntes Markdown',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Als PDF exportieren…',
+    menuOpenInDocs: 'In Docs umwandeln und öffnen',
     menuOpen: 'Öffnen…',
     menuSave: 'Speichern',
     menuSaveAs: 'Speichern unter…',
@@ -586,13 +597,8 @@ const tMain = createI18n({
     filterWord: 'Word-Dokumente',
     filterExcel: 'Excel-Arbeitsmappen',
     filterPpt: 'PowerPoint-Präsentationen',
-    filterPdf: 'PDF-Dokumente',
     filterMarkdown: 'Markdown-Dokumente',
-    docOpenMsg: '.doc-Datei öffnen',
-    docOpenDetail:
-      'Diese Datei wird als reiner Text geöffnet. Formatierungen gehen verloren. Speichern Sie als .docx für vollständige Bearbeitung.',
-    docOpenBtnOpen: 'Öffnen',
-    docOpenFailedMsg: '.doc-Datei konnte nicht geöffnet werden',
+    filterPdf: 'PDF-Dokumente',
     errBadArgs: 'Ungültige Argumente',
     errBadName: 'Ungültiger Dateiname',
     errMissing: 'Datei nicht gefunden',
@@ -618,6 +624,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Anmeldung bei Genspark nicht möglich: Eine erforderliche Komponente (gsk) fehlt. Bitte installieren Sie die App neu.',
     pdfDocxBusyMsg: 'Ein Word-Export läuft bereits. Bitte warten Sie, bis er abgeschlossen ist.',
+    dlgPickSaveDir: 'Standard-Speicherort auswählen',
+    errSaveDirUnusable:
+      'Der ausgewählte Ordner ist nicht beschreibbar und kann nicht als Standard-Speicherort verwendet werden',
   },
   es: {
     menuFile: 'Archivo',
@@ -628,8 +637,10 @@ const tMain = createI18n({
     untitledDoc: 'Documento sin título',
     untitledDeck: 'Presentación sin título',
     untitledMarkdown: 'Markdown sin título',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Exportar como PDF…',
+    menuOpenInDocs: 'Convertir y abrir en Docs',
     menuOpen: 'Abrir…',
     menuSave: 'Guardar',
     menuSaveAs: 'Guardar como…',
@@ -643,13 +654,8 @@ const tMain = createI18n({
     filterWord: 'Documentos de Word',
     filterExcel: 'Libros de Excel',
     filterPpt: 'Presentaciones de PowerPoint',
-    filterPdf: 'Documentos PDF',
     filterMarkdown: 'Documentos Markdown',
-    docOpenMsg: 'Abrir archivo .doc',
-    docOpenDetail:
-      'Este archivo se abrirá como texto plano. El formato no se conservará. Guarde como .docx para soporte completo.',
-    docOpenBtnOpen: 'Abrir',
-    docOpenFailedMsg: 'No se pudo abrir el archivo .doc',
+    filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos no válidos',
     errBadName: 'Nombre de archivo no válido',
     errMissing: 'Archivo no encontrado',
@@ -675,6 +681,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'No se puede iniciar sesión en Genspark: falta un componente necesario (gsk). Reinstale la aplicación.',
     pdfDocxBusyMsg: 'Ya hay una exportación a Word en curso. Espera a que termine.',
+    dlgPickSaveDir: 'Elegir ubicación de guardado predeterminada',
+    errSaveDirUnusable:
+      'La carpeta seleccionada no admite escritura y no puede usarse como ubicación de guardado predeterminada',
   },
   th: {
     menuFile: 'ไฟล์',
@@ -685,8 +694,10 @@ const tMain = createI18n({
     untitledDoc: 'เอกสารไม่มีชื่อ',
     untitledDeck: 'งานนำเสนอไม่มีชื่อ',
     untitledMarkdown: 'Markdown ไม่มีชื่อ',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'ส่งออกเป็น PDF…',
+    menuOpenInDocs: 'แปลงและเปิดใน Docs',
     menuOpen: 'เปิด…',
     menuSave: 'บันทึก',
     menuSaveAs: 'บันทึกเป็น…',
@@ -700,13 +711,8 @@ const tMain = createI18n({
     filterWord: 'เอกสาร Word',
     filterExcel: 'เวิร์กบุ๊ก Excel',
     filterPpt: 'งานนำเสนอ PowerPoint',
-    filterPdf: 'เอกสาร PDF',
     filterMarkdown: 'เอกสาร Markdown',
-    docOpenMsg: 'เปิดไฟล์ .doc',
-    docOpenDetail:
-      'ไฟล์นี้จะเปิดเป็นข้อความธรรมดา การจัดรูปแบบจะไม่ถูกเก็บรักษา บันทึกเป็น .docx สำหรับการแก้ไขเต็มรูปแบบ',
-    docOpenBtnOpen: 'เปิด',
-    docOpenFailedMsg: 'ไม่สามารถเปิดไฟล์ .doc ได้',
+    filterPdf: 'เอกสาร PDF',
     errBadArgs: 'อาร์กิวเมนต์ไม่ถูกต้อง',
     errBadName: 'ชื่อไฟล์ไม่ถูกต้อง',
     errMissing: 'ไม่พบไฟล์',
@@ -731,6 +737,8 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'ไม่สามารถลงชื่อเข้าใช้ Genspark ได้: ไม่พบคอมโพเนนต์ที่จำเป็น (gsk) โปรดติดตั้งแอปใหม่',
     pdfDocxBusyMsg: 'กำลังส่งออกเป็น Word อยู่ โปรดรอให้เสร็จสิ้นก่อน',
+    dlgPickSaveDir: 'เลือกตำแหน่งบันทึกเริ่มต้น',
+    errSaveDirUnusable: 'โฟลเดอร์ที่เลือกไม่สามารถเขียนได้ จึงใช้เป็นตำแหน่งบันทึกเริ่มต้นไม่ได้',
   },
   id: {
     menuFile: 'File',
@@ -740,9 +748,11 @@ const tMain = createI18n({
     untitledSheet: 'Spreadsheet tanpa judul',
     untitledDoc: 'Dokumen tanpa judul',
     untitledDeck: 'Presentasi tanpa judul',
-    untitledMarkdown: 'Markdown Tanpa Judul',
-    menuNewMarkdown: 'AI Markdown',
+    untitledMarkdown: 'Markdown tanpa judul',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Ekspor sebagai PDF…',
+    menuOpenInDocs: 'Konversi dan buka di Docs',
     menuOpen: 'Buka…',
     menuSave: 'Simpan',
     menuSaveAs: 'Simpan Sebagai…',
@@ -756,13 +766,8 @@ const tMain = createI18n({
     filterWord: 'Dokumen Word',
     filterExcel: 'Buku Kerja Excel',
     filterPpt: 'Presentasi PowerPoint',
-    filterPdf: 'Dokumen PDF',
     filterMarkdown: 'Dokumen Markdown',
-    docOpenMsg: 'Buka file .doc',
-    docOpenDetail:
-      'File ini akan dibuka sebagai teks biasa. Format tidak akan dipertahankan. Simpan sebagai .docx untuk dukungan editing penuh.',
-    docOpenBtnOpen: 'Buka',
-    docOpenFailedMsg: 'Gagal membuka file .doc',
+    filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak valid',
     errBadName: 'Nama file tidak valid',
     errMissing: 'File tidak ditemukan',
@@ -788,6 +793,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Tidak dapat masuk ke Genspark: komponen yang diperlukan (gsk) tidak ditemukan. Silakan instal ulang aplikasi.',
     pdfDocxBusyMsg: 'Ekspor ke Word sedang berlangsung. Harap tunggu hingga selesai.',
+    dlgPickSaveDir: 'Pilih Lokasi Penyimpanan Default',
+    errSaveDirUnusable:
+      'Folder yang dipilih tidak dapat ditulis dan tidak bisa digunakan sebagai lokasi penyimpanan default',
   },
   ru: {
     menuFile: 'Файл',
@@ -797,9 +805,11 @@ const tMain = createI18n({
     untitledSheet: 'Таблица без названия',
     untitledDoc: 'Документ без названия',
     untitledDeck: 'Презентация без названия',
-    untitledMarkdown: 'Безымянный Markdown',
-    menuNewMarkdown: 'AI Markdown',
+    untitledMarkdown: 'Markdown без названия',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Экспортировать в PDF…',
+    menuOpenInDocs: 'Преобразовать и открыть в Docs',
     menuOpen: 'Открыть…',
     menuSave: 'Сохранить',
     menuSaveAs: 'Сохранить как…',
@@ -813,13 +823,8 @@ const tMain = createI18n({
     filterWord: 'Документы Word',
     filterExcel: 'Книги Excel',
     filterPpt: 'Презентации PowerPoint',
-    filterPdf: 'Документы PDF',
     filterMarkdown: 'Документы Markdown',
-    docOpenMsg: 'Открыть файл .doc',
-    docOpenDetail:
-      'Файл откроется как обычный текст. Форматирование не сохранится. Сохраните как .docx для полной поддержки.',
-    docOpenBtnOpen: 'Открыть',
-    docOpenFailedMsg: 'Не удалось открыть файл .doc',
+    filterPdf: 'Документы PDF',
     errBadArgs: 'Недопустимые аргументы',
     errBadName: 'Недопустимое имя файла',
     errMissing: 'Файл не найден',
@@ -845,6 +850,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Не удаётся войти в Genspark: отсутствует необходимый компонент (gsk). Переустановите приложение.',
     pdfDocxBusyMsg: 'Экспорт в Word уже выполняется. Дождитесь его завершения.',
+    dlgPickSaveDir: 'Выбрать папку сохранения по умолчанию',
+    errSaveDirUnusable:
+      'Выбранная папка недоступна для записи и не может использоваться как папка сохранения по умолчанию',
   },
   ar: {
     menuFile: 'ملف',
@@ -855,8 +863,10 @@ const tMain = createI18n({
     untitledDoc: 'مستند بدون عنوان',
     untitledDeck: 'عرض تقديمي بدون عنوان',
     untitledMarkdown: 'Markdown بدون عنوان',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'تصدير بتنسيق PDF…',
+    menuOpenInDocs: 'التحويل والفتح في Docs',
     menuOpen: 'فتح…',
     menuSave: 'حفظ',
     menuSaveAs: 'حفظ باسم…',
@@ -870,13 +880,8 @@ const tMain = createI18n({
     filterWord: 'مستندات Word',
     filterExcel: 'مصنفات Excel',
     filterPpt: 'عروض PowerPoint التقديمية',
-    filterPdf: 'مستندات PDF',
     filterMarkdown: 'مستندات Markdown',
-    docOpenMsg: 'فتح ملف .doc',
-    docOpenDetail:
-      'سيتم فتح هذا الملف كنص عادي. لن يتم الحفاظ على التنسيق. احفظ كـ .docx للحصول على دعم كامل.',
-    docOpenBtnOpen: 'فتح',
-    docOpenFailedMsg: 'فشل في فتح ملف .doc',
+    filterPdf: 'مستندات PDF',
     errBadArgs: 'وسيطات غير صالحة',
     errBadName: 'اسم ملف غير صالح',
     errMissing: 'الملف غير موجود',
@@ -901,6 +906,8 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'تعذّر تسجيل الدخول إلى Genspark: المكوّن المطلوب (gsk) مفقود. يُرجى إعادة تثبيت التطبيق.',
     pdfDocxBusyMsg: 'يجري حاليًا تصدير إلى Word. يُرجى الانتظار حتى يكتمل.',
+    dlgPickSaveDir: 'اختيار موقع الحفظ الافتراضي',
+    errSaveDirUnusable: 'المجلد المحدد غير قابل للكتابة ولا يمكن استخدامه كموقع حفظ افتراضي',
   },
   pt: {
     menuFile: 'Arquivo',
@@ -911,8 +918,10 @@ const tMain = createI18n({
     untitledDoc: 'Documento sem título',
     untitledDeck: 'Apresentação sem título',
     untitledMarkdown: 'Markdown sem título',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Exportar como PDF…',
+    menuOpenInDocs: 'Converter e abrir no Docs',
     menuOpen: 'Abrir…',
     menuSave: 'Salvar',
     menuSaveAs: 'Salvar Como…',
@@ -926,13 +935,8 @@ const tMain = createI18n({
     filterWord: 'Documentos do Word',
     filterExcel: 'Pastas de trabalho do Excel',
     filterPpt: 'Apresentações do PowerPoint',
-    filterPdf: 'Documentos PDF',
     filterMarkdown: 'Documentos Markdown',
-    docOpenMsg: 'Abrir arquivo .doc',
-    docOpenDetail:
-      'Este arquivo será aberto como texto simples. A formatação não será preservada. Salve como .docx para suporte completo.',
-    docOpenBtnOpen: 'Abrir',
-    docOpenFailedMsg: 'Falha ao abrir arquivo .doc',
+    filterPdf: 'Documentos PDF',
     errBadArgs: 'Argumentos inválidos',
     errBadName: 'Nome de arquivo inválido',
     errMissing: 'Arquivo não encontrado',
@@ -958,6 +962,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Não é possível iniciar sessão no Genspark: falta um componente necessário (gsk). Reinstale o aplicativo.',
     pdfDocxBusyMsg: 'Já há uma exportação para Word em andamento. Aguarde a conclusão.',
+    dlgPickSaveDir: 'Escolher local de salvamento padrão',
+    errSaveDirUnusable:
+      'A pasta selecionada não permite gravação e não pode ser usada como local de salvamento padrão',
   },
   it: {
     menuFile: 'File',
@@ -968,8 +975,10 @@ const tMain = createI18n({
     untitledDoc: 'Documento senza titolo',
     untitledDeck: 'Presentazione senza titolo',
     untitledMarkdown: 'Markdown senza titolo',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Esporta come PDF…',
+    menuOpenInDocs: 'Converti e apri in Docs',
     menuOpen: 'Apri…',
     menuSave: 'Salva',
     menuSaveAs: 'Salva con nome…',
@@ -983,13 +992,8 @@ const tMain = createI18n({
     filterWord: 'Documenti Word',
     filterExcel: 'Cartelle di lavoro Excel',
     filterPpt: 'Presentazioni PowerPoint',
-    filterPdf: 'Documenti PDF',
     filterMarkdown: 'Documenti Markdown',
-    docOpenMsg: 'Apri file .doc',
-    docOpenDetail:
-      'Questo file verrà aperto come testo semplice. La formattazione non verrà mantenuta. Salva come .docx per il supporto completo.',
-    docOpenBtnOpen: 'Apri',
-    docOpenFailedMsg: 'Impossibile aprire il file .doc',
+    filterPdf: 'Documenti PDF',
     errBadArgs: 'Argomenti non validi',
     errBadName: 'Nome file non valido',
     errMissing: 'File non trovato',
@@ -1015,6 +1019,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       "Impossibile accedere a Genspark: manca un componente necessario (gsk). Reinstallare l'app.",
     pdfDocxBusyMsg: "Un'esportazione in Word è già in corso. Attendi il completamento.",
+    dlgPickSaveDir: 'Scegli la posizione di salvataggio predefinita',
+    errSaveDirUnusable:
+      'La cartella selezionata non è scrivibile e non può essere usata come posizione di salvataggio predefinita',
   },
   pl: {
     menuFile: 'Plik',
@@ -1025,8 +1032,10 @@ const tMain = createI18n({
     untitledDoc: 'Dokument bez tytułu',
     untitledDeck: 'Prezentacja bez tytułu',
     untitledMarkdown: 'Markdown bez tytułu',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Eksportuj jako PDF…',
+    menuOpenInDocs: 'Konwertuj i otwórz w Docs',
     menuOpen: 'Otwórz…',
     menuSave: 'Zapisz',
     menuSaveAs: 'Zapisz jako…',
@@ -1040,13 +1049,8 @@ const tMain = createI18n({
     filterWord: 'Dokumenty programu Word',
     filterExcel: 'Skoroszyty programu Excel',
     filterPpt: 'Prezentacje programu PowerPoint',
-    filterPdf: 'Dokumenty PDF',
     filterMarkdown: 'Dokumenty Markdown',
-    docOpenMsg: 'Otwórz plik .doc',
-    docOpenDetail:
-      'Ten plik zostanie otwarty jako zwykły tekst. Formatowanie nie zostanie zachowane. Zapisz jako .docx, aby uzyskać pełne wsparcie.',
-    docOpenBtnOpen: 'Otwórz',
-    docOpenFailedMsg: 'Nie udało się otworzyć pliku .doc',
+    filterPdf: 'Dokumenty PDF',
     errBadArgs: 'Nieprawidłowe argumenty',
     errBadName: 'Nieprawidłowa nazwa pliku',
     errMissing: 'Nie znaleziono pliku',
@@ -1072,6 +1076,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Nie można zalogować się do Genspark: brakuje wymaganego komponentu (gsk). Zainstaluj aplikację ponownie.',
     pdfDocxBusyMsg: 'Eksport do formatu Word już trwa. Poczekaj na jego zakończenie.',
+    dlgPickSaveDir: 'Wybierz domyślną lokalizację zapisu',
+    errSaveDirUnusable:
+      'Wybrany folder nie pozwala na zapis i nie może być domyślną lokalizacją zapisu',
   },
   nl: {
     menuFile: 'Bestand',
@@ -1081,9 +1088,11 @@ const tMain = createI18n({
     untitledSheet: 'Naamloze spreadsheet',
     untitledDoc: 'Naamloos document',
     untitledDeck: 'Naamloze presentatie',
-    untitledMarkdown: 'Naamloze Markdown',
-    menuNewMarkdown: 'AI Markdown',
+    untitledMarkdown: 'Naamloos Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Exporteren als PDF…',
+    menuOpenInDocs: 'Converteren en openen in Docs',
     menuOpen: 'Openen…',
     menuSave: 'Opslaan',
     menuSaveAs: 'Opslaan als…',
@@ -1097,13 +1106,8 @@ const tMain = createI18n({
     filterWord: 'Word-documenten',
     filterExcel: 'Excel-werkmappen',
     filterPpt: 'PowerPoint-presentaties',
-    filterPdf: 'PDF-documenten',
     filterMarkdown: 'Markdown-documenten',
-    docOpenMsg: '.doc-bestand openen',
-    docOpenDetail:
-      'Dit bestand wordt geopend als platte tekst. Opmaak wordt niet behouden. Opslaan als .docx voor volledige ondersteuning.',
-    docOpenBtnOpen: 'Openen',
-    docOpenFailedMsg: 'Kan .doc-bestand niet openen',
+    filterPdf: 'PDF-documenten',
     errBadArgs: 'Ongeldige argumenten',
     errBadName: 'Ongeldige bestandsnaam',
     errMissing: 'Bestand niet gevonden',
@@ -1129,6 +1133,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Kan niet inloggen bij Genspark: een vereist onderdeel (gsk) ontbreekt. Installeer de app opnieuw.',
     pdfDocxBusyMsg: 'Er is al een Word-export bezig. Wacht tot deze is voltooid.',
+    dlgPickSaveDir: 'Standaard opslaglocatie kiezen',
+    errSaveDirUnusable:
+      'De geselecteerde map is niet beschrijfbaar en kan niet als standaard opslaglocatie worden gebruikt',
   },
   ms: {
     menuFile: 'Fail',
@@ -1138,9 +1145,11 @@ const tMain = createI18n({
     untitledSheet: 'Hamparan tanpa tajuk',
     untitledDoc: 'Dokumen tanpa tajuk',
     untitledDeck: 'Persembahan tanpa tajuk',
-    untitledMarkdown: 'Markdown Tanpa Tajuk',
-    menuNewMarkdown: 'AI Markdown',
+    untitledMarkdown: 'Markdown tanpa tajuk',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'Eksport sebagai PDF…',
+    menuOpenInDocs: 'Tukar dan buka dalam Docs',
     menuOpen: 'Buka…',
     menuSave: 'Simpan',
     menuSaveAs: 'Simpan Sebagai…',
@@ -1154,13 +1163,8 @@ const tMain = createI18n({
     filterWord: 'Dokumen Word',
     filterExcel: 'Buku Kerja Excel',
     filterPpt: 'Persembahan PowerPoint',
-    filterPdf: 'Dokumen PDF',
     filterMarkdown: 'Dokumen Markdown',
-    docOpenMsg: 'Buka file .doc',
-    docOpenDetail:
-      'File ini akan dibuka sebagai teks biasa. Format tidak akan dipertahankan. Simpan sebagai .docx untuk dukungan editing penuh.',
-    docOpenBtnOpen: 'Buka',
-    docOpenFailedMsg: 'Gagal membuka file .doc',
+    filterPdf: 'Dokumen PDF',
     errBadArgs: 'Argumen tidak sah',
     errBadName: 'Nama fail tidak sah',
     errMissing: 'Fail tidak ditemui',
@@ -1186,6 +1190,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Tidak dapat log masuk ke Genspark: komponen yang diperlukan (gsk) tiada. Sila pasang semula aplikasi.',
     pdfDocxBusyMsg: 'Eksport ke Word sedang dijalankan. Sila tunggu sehingga selesai.',
+    dlgPickSaveDir: 'Pilih Lokasi Simpanan Lalai',
+    errSaveDirUnusable:
+      'Folder yang dipilih tidak boleh ditulis dan tidak dapat digunakan sebagai lokasi simpanan lalai',
   },
   he: {
     menuFile: 'קובץ',
@@ -1195,9 +1202,11 @@ const tMain = createI18n({
     untitledSheet: 'גיליון אלקטרוני ללא שם',
     untitledDoc: 'מסמך ללא שם',
     untitledDeck: 'מצגת ללא שם',
-    untitledMarkdown: 'Markdown ללא כותרת',
-    menuNewMarkdown: 'AI Markdown',
+    untitledMarkdown: 'Markdown ללא שם',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'ייצוא כ-PDF…',
+    menuOpenInDocs: 'המרה ופתיחה ב-Docs',
     menuOpen: 'פתיחה…',
     menuSave: 'שמירה',
     menuSaveAs: 'שמירה בשם…',
@@ -1211,12 +1220,8 @@ const tMain = createI18n({
     filterWord: 'מסמכי Word',
     filterExcel: 'חוברות עבודה של Excel',
     filterPpt: 'מצגות PowerPoint',
-    filterPdf: 'מסמכי PDF',
     filterMarkdown: 'מסמכי Markdown',
-    docOpenMsg: 'פתח קובץ .doc',
-    docOpenDetail: 'קובץ זה ייפתח כטקסט רגיל. העיצוב לא יישמר. שמור כ-.docx לעריכה מלאה.',
-    docOpenBtnOpen: 'פתח',
-    docOpenFailedMsg: 'נכשל בפתיחת קובץ .doc',
+    filterPdf: 'מסמכי PDF',
     errBadArgs: 'ארגומנטים לא חוקיים',
     errBadName: 'שם קובץ לא חוקי',
     errMissing: 'הקובץ לא נמצא',
@@ -1239,6 +1244,9 @@ const tMain = createI18n({
     pdfDocxFailedMsg: 'הייצוא כ-Word נכשל',
     pdfDocxNoCliMsg: 'לא ניתן להתחבר ל-Genspark: רכיב נדרש (gsk) חסר. נא להתקין מחדש את האפליקציה.',
     pdfDocxBusyMsg: 'ייצוא ל-Word כבר מתבצע. נא להמתין לסיומו.',
+    dlgPickSaveDir: 'בחירת מיקום שמירה כברירת מחדל',
+    errSaveDirUnusable:
+      'התיקייה שנבחרה אינה ניתנת לכתיבה ולא ניתן להשתמש בה כמיקום שמירה כברירת מחדל',
   },
   hi: {
     menuFile: 'फ़ाइल',
@@ -1248,9 +1256,11 @@ const tMain = createI18n({
     untitledSheet: 'शीर्षकहीन स्प्रेडशीट',
     untitledDoc: 'बिना शीर्षक दस्तावेज़',
     untitledDeck: 'बिना शीर्षक प्रस्तुति',
-    untitledMarkdown: 'बिना शीर्षक Markdown',
-    menuNewMarkdown: 'AI Markdown',
+    untitledMarkdown: 'अनाम Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: 'PDF के रूप में निर्यात…',
+    menuOpenInDocs: 'Docs में बदलें और खोलें',
     menuOpen: 'खोलें…',
     menuSave: 'सहेजें',
     menuSaveAs: 'इस रूप में सहेजें…',
@@ -1264,13 +1274,8 @@ const tMain = createI18n({
     filterWord: 'Word दस्तावेज़',
     filterExcel: 'Excel वर्कबुक',
     filterPpt: 'PowerPoint प्रस्तुतियाँ',
-    filterPdf: 'PDF दस्तावेज़',
     filterMarkdown: 'Markdown दस्तावेज़',
-    docOpenMsg: '.doc फ़ाइल खोलें',
-    docOpenDetail:
-      'यह फ़ाइल सादे टेक्स्ट के रूप में खुलेगी। फ़ॉर्मेटिंग संरक्षित नहीं होगी। पूर्ण संपादन समर्थन के लिए .docx के रूप में सहेजें।',
-    docOpenBtnOpen: 'खोलें',
-    docOpenFailedMsg: '.doc फ़ाइल खोलने में विफल',
+    filterPdf: 'PDF दस्तावेज़',
     errBadArgs: 'अमान्य आर्ग्युमेंट',
     errBadName: 'अमान्य फ़ाइल नाम',
     errMissing: 'फ़ाइल नहीं मिली',
@@ -1296,6 +1301,9 @@ const tMain = createI18n({
     pdfDocxNoCliMsg:
       'Genspark में साइन इन नहीं किया जा सकता: आवश्यक घटक (gsk) मौजूद नहीं है। कृपया ऐप को फिर से इंस्टॉल करें।',
     pdfDocxBusyMsg: 'Word के रूप में निर्यात पहले से चल रहा है। कृपया पूरा होने तक प्रतीक्षा करें।',
+    dlgPickSaveDir: 'डिफ़ॉल्ट सहेजने का स्थान चुनें',
+    errSaveDirUnusable:
+      'चयनित फ़ोल्डर में लिखा नहीं जा सकता, इसलिए इसे डिफ़ॉल्ट सहेजने के स्थान के रूप में उपयोग नहीं किया जा सकता',
   },
   'zh-TW': {
     menuFile: '檔案',
@@ -1306,8 +1314,10 @@ const tMain = createI18n({
     untitledDoc: '未命名文件',
     untitledDeck: '未命名簡報',
     untitledMarkdown: '未命名 Markdown',
-    menuNewMarkdown: 'AI Markdown',
     menuNewSlide: 'AI Slides',
+    menuNewMarkdown: 'AI Markdown',
+    menuExportPdf: '匯出為 PDF…',
+    menuOpenInDocs: '轉換為 Docs 文件並開啟',
     menuOpen: '開啟…',
     menuSave: '儲存',
     menuSaveAs: '另存新檔…',
@@ -1321,12 +1331,8 @@ const tMain = createI18n({
     filterWord: 'Word 文件',
     filterExcel: 'Excel 活頁簿',
     filterPpt: 'PowerPoint 簡報',
-    filterPdf: 'PDF 文件',
     filterMarkdown: 'Markdown 文件',
-    docOpenMsg: '開啟 .doc 檔案',
-    docOpenDetail: '此檔案將以純文字形式開啟，格式將不會保留。另存為 .docx 可獲得完整編輯支援。',
-    docOpenBtnOpen: '繼續開啟',
-    docOpenFailedMsg: '開啟 .doc 檔案失敗',
+    filterPdf: 'PDF 文件',
     errBadArgs: '參數無效',
     errBadName: '檔案名稱不合法',
     errMissing: '檔案不存在',
@@ -1349,6 +1355,8 @@ const tMain = createI18n({
     pdfDocxFailedMsg: '匯出為 Word 失敗',
     pdfDocxNoCliMsg: '無法登入 Genspark：缺少必要元件（gsk），請重新安裝應用程式。',
     pdfDocxBusyMsg: '正在轉換中，請等待目前的匯出完成。',
+    dlgPickSaveDir: '選擇預設儲存位置',
+    errSaveDirUnusable: '所選資料夾無法寫入，無法作為預設儲存位置',
   },
 })
 
@@ -1435,6 +1443,9 @@ function createShellWindow(): void {
     },
   })
   shellWindow = win
+  // dragging the window by the tab strip's blank (draggable) area produces no
+  // DOM event anywhere — will-move is the only signal to dismiss popovers
+  win.on('will-move', broadcastChromePressed)
 
   const manager = new TabManager(
     win,
@@ -1489,6 +1500,16 @@ function createShellWindow(): void {
     recordRecentFile(path)
     applyPendingProject(path)
   })
+  // markdown untitled first save / Save As lands on a new path
+  setMarkdownFileSavedHook((wc, path) => {
+    manager.setTabFileFor(wc.id, path)
+    recordRecentFile(path)
+    applyPendingProject(path)
+  })
+  // markdown "convert & open in Docs" → route the fresh .docx to a docs tab
+  setMarkdownDocxExportedHook((path) => {
+    openDocumentPath(path)
+  })
 
   // Closing the whole window walks every dirty sheets/pdf/slides/docs tab through
   // the same save/don't-save/cancel prompt; any cancel aborts the close.
@@ -1499,14 +1520,14 @@ function createShellWindow(): void {
     if (closeConfirmed) return
     const dirtySheets = manager.dirtySheetsTabs()
     const dirtyPdf = manager.dirtyPdfTabs()
-    const dirtySlides = manager.dirtySlidesTabs()
     const dirtyMarkdown = manager.dirtyMarkdownTabs()
+    const dirtySlides = manager.dirtySlidesTabs()
     const docsTabs = manager.docsTabs()
     if (
       dirtySheets.length === 0 &&
       dirtyPdf.length === 0 &&
-      dirtySlides.length === 0 &&
       dirtyMarkdown.length === 0 &&
+      dirtySlides.length === 0 &&
       docsTabs.length === 0
     )
       return
@@ -1520,13 +1541,13 @@ function createShellWindow(): void {
         manager.activateTab(tab.id)
         if (!(await requestPdfClose(tab.webContents, win))) return
       }
-      for (const tab of dirtySlides) {
-        manager.activateTab(tab.id)
-        if (!(await requestSlidesClose(tab.webContents, win))) return
-      }
       for (const tab of dirtyMarkdown) {
         manager.activateTab(tab.id)
         if (!(await requestMarkdownClose(tab.webContents, win))) return
+      }
+      for (const tab of dirtySlides) {
+        manager.activateTab(tab.id)
+        if (!(await requestSlidesClose(tab.webContents, win))) return
       }
       for (const tab of docsTabs) {
         if (!(await docsQueryDirty(tab.webContents))) continue
@@ -1553,28 +1574,37 @@ function createShellWindow(): void {
 // ---- routing: one dispatch function for every open path ----
 
 const DOCX_RE = /\.docx$/i
-const DOC_RE = /\.doc$/i
 const XLSX_RE = /\.(xlsx|xls|csv)$/i
 const PPTX_RE = /\.pptx$/i
 const PDF_RE = /\.pdf$/i
 const MD_RE = /\.(md|markdown)$/i
 
 /** document formats we recognize but don't open — surfaced as a dialog, not silently dropped */
-const UNSUPPORTED_DOC_RE = /\.(rtf|odt|ppt|pps|odp|ods|xlsm|xlsb|pages|key|numbers)$/i
+const UNSUPPORTED_DOC_RE = /\.(doc|rtf|odt|ppt|pps|odp|ods|xlsm|xlsb|pages|key|numbers)$/i
 
 /**
  * Single source of truth for the open-dialog filter. Includes the
  * legacy .doc/.ppt binaries so they are selectable and surface the explicit
  * "not supported" dialog via openDocumentPath instead of being grayed out.
  */
-const OPEN_DIALOG_EXTENSIONS = ['docx', 'doc', 'xlsx', 'xls', 'csv', 'pptx', 'ppt', 'pdf', 'md']
+const OPEN_DIALOG_EXTENSIONS = [
+  'docx',
+  'doc',
+  'xlsx',
+  'xls',
+  'csv',
+  'pptx',
+  'ppt',
+  'pdf',
+  'md',
+  'markdown',
+]
 
 function supportedFileIn(argv: string[]): string | null {
   return (
     argv.find(
       (arg) =>
         (DOCX_RE.test(arg) ||
-          DOC_RE.test(arg) ||
           XLSX_RE.test(arg) ||
           PPTX_RE.test(arg) ||
           PDF_RE.test(arg) ||
@@ -1647,10 +1677,6 @@ function openDocumentPath(filePath: string): boolean {
     else tabManager.openMarkdownTab(filePath)
     return true
   }
-  if (DOC_RE.test(filePath)) {
-    void openDocFile(filePath)
-    return true
-  }
   notifyUnsupportedFile(filePath)
   return false
 }
@@ -1714,45 +1740,6 @@ function newMarkdownTab(): void {
 }
 
 /**
- * Open a legacy .doc file: show a warning dialog, then extract text and
- * open in the docs editor. The user can save as .docx for full formatting.
- */
-async function openDocFile(filePath: string): Promise<void> {
-  const win = shellWindow
-  if (!win) return
-  const { response } = await dialog.showMessageBox(win, {
-    type: 'info',
-    message: tm('docOpenMsg'),
-    detail: tm('docOpenDetail'),
-    buttons: [tm('docOpenBtnOpen'), tm('btnCancel')],
-    defaultId: 0,
-    cancelId: 1,
-    noLink: true,
-  })
-  if (response === 1) return
-  try {
-    const WordExtractor = (await import('word-extractor')).default
-    const extractor = new WordExtractor()
-    const doc = await extractor.extract(filePath)
-    const text = doc.getBody() ?? ''
-    const tmpDir = join(app.getPath('temp'), 'genoffice-doc')
-    const { mkdirSync, writeFileSync: writeFileAtomic } = await import('node:fs')
-    mkdirSync(tmpDir, { recursive: true })
-    const tmpFile = join(tmpDir, basename(filePath, extname(filePath)) + '.txt')
-    writeFileAtomic(tmpFile, text, 'utf-8')
-    recordRecentFile(filePath)
-    tabManager?.openDocsTab(tmpFile)
-  } catch (err) {
-    console.error('[shell] .doc conversion failed:', err)
-    void dialog.showMessageBox(win, {
-      type: 'error',
-      message: tm('docOpenFailedMsg'),
-      detail: err instanceof Error ? err.message : String(err),
-    })
-  }
-}
-
-/**
  * The sheets renderer subscribes to menu actions only after Univer finishes
  * mounting (seconds on cold start), so a single 'open' can fire into the
  * void. Re-send until the queued workbook is consumed; consumption clears the
@@ -1787,7 +1774,9 @@ function registerHomeIpc(): void {
     if (!loadGenofficeAuth()) return { loggedIn: false }
     await proxyBootstrap
     const info = await gskLoginInfo()
-    return info ? { loggedIn: true, email: info.email } : { loggedIn: true }
+    return info
+      ? { loggedIn: true, email: info.email, creditBalance: info.creditBalance }
+      : { loggedIn: true }
   })
 
   // login progress is streamed to the requesting renderer; the auth URL is
@@ -1937,6 +1926,7 @@ function registerHomeIpc(): void {
         if (t.kind === 'slides') slidesFileRenamed(t.webContents, path, target)
         else if (t.kind === 'docs') docsFileRenamed(t.webContents, path, target)
         else if (t.kind === 'sheets') sheetsFileRenamed(t.webContents, path, target)
+        else if (t.kind === 'markdown') markdownFileRenamed(t.webContents, path, target)
       }
       return { ok: true, path: target }
     },
@@ -2021,8 +2011,34 @@ function registerHomeIpc(): void {
     for (const wc of webContents.getAllWebContents()) wc.send('app:theme-changed', theme)
   })
 
+  // effective folder where new/untitled files land; the editor mains resolve
+  // the same setting themselves (configuredDefaultSaveDir via docs' defaultSaveDir)
+  ipcMain.handle(HOME_CHANNELS.getDefaultSaveDir, (): string => defaultSaveDir())
+
+  ipcMain.handle(HOME_CHANNELS.pickDefaultSaveDir, async (): Promise<string | null> => {
+    const result = await showOpenDialogWithMemory(dialog, shellWindow, {
+      title: tm('dlgPickSaveDir'),
+      defaultPath: defaultSaveDir(),
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    const picked = result.filePaths[0]
+    if (result.canceled || !picked) return null
+    if (!isUsableSaveDir(picked)) {
+      showErrorDialog(shellWindow, tm('errSaveDirUnusable'), picked)
+      return null
+    }
+    writeAppSetting(APP_SETTINGS_PATH(), DEFAULT_SAVE_DIR_KEY, picked)
+    return picked
+  })
+
   ipcMain.handle(HOME_CHANNELS.openGenTeam, () => {
     shell.openExternal(GENTEAM_URL).catch(() => {
+      // no browser handler available; nothing actionable for the user here
+    })
+  })
+
+  ipcMain.handle(HOME_CHANNELS.openCreditUsage, () => {
+    shell.openExternal(CREDIT_USAGE_URL).catch(() => {
       // no browser handler available; nothing actionable for the user here
     })
   })
@@ -2059,8 +2075,8 @@ interface MenuIconSet {
   xlsx: NativeImage
   pptx: NativeImage
   pdf: NativeImage
+  md: NativeImage
   home: NativeImage
-  markdown: NativeImage
 }
 let menuIconCache: MenuIconSet | null = null
 function menuIcons(): MenuIconSet {
@@ -2069,8 +2085,8 @@ function menuIcons(): MenuIconSet {
     xlsx: loadMenuIcon(menuXlsxIcon1x, menuXlsxIcon2x),
     pptx: loadMenuIcon(menuPptxIcon1x, menuPptxIcon2x),
     pdf: loadMenuIcon(menuPdfIcon1x, menuPdfIcon2x),
+    md: loadMenuIcon(menuMdIcon1x, menuMdIcon2x),
     home: loadMenuIcon(menuHomeIcon1x, menuHomeIcon2x),
-    markdown: loadMenuIcon(menuMarkdownIcon1x, menuMarkdownIcon2x),
   }
   return menuIconCache
 }
@@ -2081,10 +2097,17 @@ const TAB_MENU_ICON: Record<TabKind, keyof MenuIconSet> = {
   sheets: 'xlsx',
   slides: 'pptx',
   pdf: 'pdf',
-  markdown: 'markdown',
+  markdown: 'md',
+}
+
+// tab views see neither DOM events nor a focus change when the user clicks the
+// shell chrome — relay the press so open popovers in documents can dismiss
+function broadcastChromePressed(): void {
+  for (const wc of webContents.getAllWebContents()) wc.send('app:chrome-pressed')
 }
 
 function registerTabsIpc(): void {
+  ipcMain.on(TABS_CHANNELS.chromePressed, broadcastChromePressed)
   ipcMain.handle(TABS_CHANNELS.list, () => tabManager?.list() ?? [])
   ipcMain.handle(TABS_CHANNELS.activate, (_event, id: string) => tabManager?.activateTab(id))
   ipcMain.handle(TABS_CHANNELS.close, (_event, id: string) => tabManager?.closeTab(id))
@@ -2135,7 +2158,7 @@ function registerTabsIpc(): void {
       },
       {
         label: tm('menuNewMarkdown'),
-        icon: menuIcons().markdown,
+        icon: menuIcons().md,
         click: () => newMarkdownTab(),
       },
       { type: 'separator' },
@@ -2240,6 +2263,84 @@ function buildPdfMenu(): void {
         {
           label: tm('menuExportDocx'),
           click: () => void exportPdfAsDocx(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuClose'),
+          accelerator: 'CmdOrCtrl+W',
+          click: () => tabManager?.closeActiveTab(),
+        },
+      ],
+    },
+    editMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    windowMenuTemplate(process.platform, appMenuLabels(currentLang())),
+    {
+      role: 'help',
+      label: tm('menuHelp'),
+      submenu: [{ label: tm('thirdPartyNotices'), click: () => void openThirdPartyNotices() }],
+    },
+  ]
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+}
+
+// ---- markdown menu (markdown-main has no menu of its own; the shell owns markdown tabs) ----
+
+function buildMarkdownMenu(): void {
+  const isMac = process.platform === 'darwin'
+  const template: MenuItemConstructorOptions[] = [
+    ...(isMac ? [{ role: 'appMenu' as const }] : []),
+    {
+      label: tm('menuFile'),
+      submenu: [
+        {
+          label: tm('menuOpen'),
+          accelerator: 'CmdOrCtrl+O',
+          click: () => void openFileViaDialog(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('backToHome'),
+          accelerator: 'Shift+CmdOrCtrl+H',
+          click: () => tabManager?.openHomeTab(),
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuSave'),
+          accelerator: 'CmdOrCtrl+S',
+          click: () => {
+            const tab = tabManager?.activeMarkdownTab()
+            if (tab) void requestMarkdownSave(tab.webContents, 'save')
+          },
+        },
+        {
+          label: tm('menuSaveAs'),
+          accelerator: 'CmdOrCtrl+Shift+S',
+          click: () => {
+            const tab = tabManager?.activeMarkdownTab()
+            if (tab) void requestMarkdownSave(tab.webContents, 'saveAs')
+          },
+        },
+        { type: 'separator' },
+        {
+          label: tm('menuExportDocx'),
+          click: () => {
+            const tab = tabManager?.activeMarkdownTab()
+            if (tab) sendMarkdownExportRequest(tab.webContents, 'docx')
+          },
+        },
+        {
+          label: tm('menuExportPdf'),
+          click: () => {
+            const tab = tabManager?.activeMarkdownTab()
+            if (tab) sendMarkdownExportRequest(tab.webContents, 'pdf')
+          },
+        },
+        {
+          label: tm('menuOpenInDocs'),
+          click: () => {
+            const tab = tabManager?.activeMarkdownTab()
+            if (tab) sendMarkdownExportRequest(tab.webContents, 'docs')
+          },
         },
         { type: 'separator' },
         {
@@ -2527,13 +2628,45 @@ registerTabsIpc()
 // sheets' project:resolveChat goes through the handler registered by docs-main; the sessionId reverse lookup hooks in here
 setSessionPathResolver(resolveSheetsSessionPath)
 
-app.whenReady().then(() => {
-  const hasLock = app.requestSingleInstanceLock(
-    pendingLaunchPath ? { launchPath: pendingLaunchPath } : {},
-  )
+/** Dev-only pid marker for the takeover below; scoped to userData like the lock itself. */
+const devPidFile = () => join(app.getPath('userData'), 'dev-instance.pid')
+
+app.whenReady().then(async () => {
+  const lockData = () => (pendingLaunchPath ? { launchPath: pendingLaunchPath } : {})
+  let hasLock = app.requestSingleInstanceLock(lockData())
+  if (!hasLock && !app.isPackaged) {
+    // Dev watch restart: electron-vite SIGTERMs the previous instance and spawns this
+    // one immediately. Chromium turns that SIGTERM into a graceful quit (Node's
+    // process.on('SIGTERM') never fires in the main process), and the quit can wedge
+    // in the close-confirmation flow — the zombie then keeps the single-instance lock,
+    // this instance quits, and electron-vite's on-close handler exits with it, killing
+    // the renderer dev server (blank shell window until a manual dev restart).
+    // The previous instance is doomed either way: kill it and take over the lock.
+    try {
+      const oldPid = Number(readFileSync(devPidFile(), 'utf-8').trim())
+      if (Number.isFinite(oldPid) && oldPid > 0 && oldPid !== process.pid) {
+        // pid-recycling guard: only kill if that pid is still an Electron process
+        const cmd = execSync(`ps -o command= -p ${oldPid}`).toString()
+        if (cmd.includes('Electron')) process.kill(oldPid, 'SIGKILL')
+      }
+    } catch {
+      // no previous instance recorded / already gone (ps exits non-zero)
+    }
+    for (let i = 0; i < 20 && !hasLock; i++) {
+      await new Promise((r) => setTimeout(r, 150))
+      hasLock = app.requestSingleInstanceLock(lockData())
+    }
+  }
   if (!hasLock) {
     app.quit()
     return
+  }
+  if (!app.isPackaged) {
+    try {
+      writeFileSync(devPidFile(), String(process.pid))
+    } catch {
+      // best-effort: without the marker the next restart just retries the lock
+    }
   }
 
   proxyBootstrap = installMainProcessProxy()
