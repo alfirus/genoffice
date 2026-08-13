@@ -7880,8 +7880,7 @@ tr > .page-gap-cut {
   min-width: 220px;
   background: var(--surface);
   border-radius: 8px;
-  box-shadow:
-var(--docs-shadow-menu);
+  box-shadow: var(--docs-shadow-menu);
   padding: 6px 0;
   margin-top: 2px;
 }
@@ -7946,8 +7945,7 @@ var(--docs-shadow-menu);
   min-width: 200px;
   background: var(--surface);
   border-radius: 8px;
-  box-shadow:
-var(--docs-shadow-menu);
+  box-shadow: var(--docs-shadow-menu);
   padding: 6px 0;
 }
 
@@ -8306,8 +8304,7 @@ var(--docs-shadow-menu);
   overflow-y: auto;
   background: var(--surface);
   border-radius: 8px;
-  box-shadow:
-var(--docs-shadow-menu);
+  box-shadow: var(--docs-shadow-menu);
   padding: 6px 0;
 }
 
@@ -8357,8 +8354,7 @@ var(--docs-shadow-menu);
   margin-top: 4px;
   background: var(--surface);
   border-radius: 8px;
-  box-shadow:
-var(--docs-shadow-menu);
+  box-shadow: var(--docs-shadow-menu);
   padding: 8px;
   width: 200px;
 }
