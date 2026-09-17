@@ -1,68 +1,115 @@
 #!/usr/bin/env python3
-"""Create a simple test PDF and apply redactions."""
+"""End-to-end verification for true PDF redaction (issue #295).
 
+Creates a test PDF, redacts it two ways (explicit rect + text search),
+then asserts:
+  1. Page count is unchanged (no duplication bug)
+  2. Redacted text is GONE from extraction (not just covered)
+  3. Unredacted text survives
+  4. Output is a valid PDF
+
+Run:  python test_redact.py
+Requires: pip install PyMuPDF reportlab
+"""
+import os
+import sys
+
+import fitz
 from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import cm
-import os
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
-# Create test PDF
-doc = SimpleDocTemplate(
-    "test_document.pdf",
-    pagesize=A4,
-    leftMargin=2*cm, rightMargin=2*cm,
-    topMargin=2*cm, bottomMargin=2*cm
-)
+from redact_pdf import redact_pdf
 
-styles = getSampleStyleSheet()
-elements = []
+SECRET = "Salary RM500000 CONFIDENTIAL"
+PUBLIC = "Welcome to the company picnic"
 
-# Add some content
-elements.append(Paragraph("Confidential Budget Proposal", styles["Title"]))
-elements.append(Spacer(1, 0.5*cm))
-elements.append(Paragraph("This document contains sensitive financial information.", styles["Normal"]))
-elements.append(Spacer(1, 0.5*cm))
-elements.append(Paragraph("**Total Budget: RM 500,000**", styles["Normal"]))
-elements.append(Spacer(1, 0.5*cm))
-elements.append(Paragraph("Employee salaries and benefits details.", styles["Normal"]))
 
-doc.build(elements)
-print('[OK] Test PDF created: test_document.pdf')
+def build_test_pdf(path):
+    styles = getSampleStyleSheet()
+    doc = SimpleDocTemplate(path, pagesize=A4,
+                            leftMargin=2 * cm, rightMargin=2 * cm,
+                            topMargin=2 * cm, bottomMargin=2 * cm)
+    elements = [
+        Paragraph("Budget Proposal", styles["Title"]),
+        Spacer(1, 0.5 * cm),
+        Paragraph(f"Budget line: {SECRET}.", styles["Normal"]),
+        Spacer(1, 0.5 * cm),
+        Paragraph(PUBLIC + ".", styles["Normal"]),
+    ]
+    doc.build(elements)
+    print(f"[OK] Test PDF created: {path}")
 
-# Now apply redaction
-from pypdf import PdfReader, PdfWriter
-from pypdf.generic import RectangleObject, NameObject, NumberObject, ArrayObject, DictionaryObject
 
-reader = PdfReader("test_document.pdf")
-writer = PdfWriter()
+def extract_all_text(path):
+    doc = fitz.open(path)
+    text = "\n".join(page.get_text() for page in doc)
+    n = len(doc)
+    doc.close()
+    return text, n
 
-for page in reader.pages:
-    # Add redaction at specific coordinates (approximate)
-    rects = [(2*72, 10*72, 150, 30)]  # x,y,width,height in points
-    
-    annots = []
-    for i, (x, y, w, h) in enumerate(rects):
-        rect = RectangleObject([x, y, x + w, y + h])
-        
-        annot = DictionaryObject()
-        annot.update({
-            NameObject("/Type"): NameObject("/Annot"),
-            NameObject("/Subtype"): NameObject("/Widget"),
-            NameObject("/Rect"): rect,
-            NameObject("/P"): page.indirect_reference,
-            NameObject("/FT"): NameObject("/Tx"),
-            NameObject("/F"): NumberObject(4)
-        })
-        
-        annots.append(annot)
-    
-    if "/Annots" not in page:
-        page[NameObject("/Annots")] = ArrayObject(annots)
 
-writer.add_page(reader.pages[0])
+def main():
+    src = "test_document.pdf"
+    out_search = "test_redacted_search.pdf"
+    out_rect = "test_redacted_rect.pdf"
+    for f in (src, out_search, out_rect):
+        if os.path.exists(f):
+            os.remove(f)
 
-with open("test_redacted.pdf", "wb") as f:
-    writer.write(f)
+    build_test_pdf(src)
+    before_text, before_pages = extract_all_text(src)
+    assert SECRET in before_text, "setup failed: secret not in source PDF"
+    print(f"[OK] Source has {before_pages} page(s), secret present")
 
-print('[OK] Redaction applied: test_redacted.pdf')
+    failures = []
+
+    # --- Test 1: search-based redaction removes the text ---
+    redact_pdf(src, out_search, search_terms=[SECRET])
+    after_text, after_pages = extract_all_text(out_search)
+    if after_pages != before_pages:
+        failures.append(f"search: page count changed {before_pages} -> {after_pages}")
+    if SECRET in after_text or "RM500000" in after_text:
+        failures.append("search: secret text still extractable after redaction!")
+    else:
+        print("[OK] Search redaction: secret text removed")
+    if "picnic" not in after_text:
+        failures.append("search: public text was destroyed!")
+    else:
+        print("[OK] Search redaction: public text preserved")
+
+    # --- Test 2: rect-based redaction removes text in the box ---
+    # Find where the secret sits, then cover it with a rect.
+    doc = fitz.open(src)
+    page = doc[0]
+    hits = page.search_for(SECRET)
+    doc.close()
+    if not hits:
+        failures.append("rect: could not locate secret text for rect test")
+    else:
+        r = hits[0]
+        rect_str = (r.x0 - 2, r.y0 - 2, r.width + 4, r.height + 4)
+        redact_pdf(src, out_rect, rects=[rect_str])
+        rect_text, rect_pages = extract_all_text(out_rect)
+        if rect_pages != before_pages:
+            failures.append(f"rect: page count changed {before_pages} -> {rect_pages}")
+        if "RM500000" in rect_text:
+            failures.append("rect: secret text still extractable after rect redaction!")
+        else:
+            print("[OK] Rect redaction: secret text removed")
+        if "picnic" not in rect_text:
+            failures.append("rect: public text was destroyed!")
+        else:
+            print("[OK] Rect redaction: public text preserved")
+
+    if failures:
+        print("\nFAIL:")
+        for f in failures:
+            print(f"  - {f}")
+        sys.exit(1)
+    print("\nPASS: true redaction verified (text removed, pages intact)")
+
+
+if __name__ == "__main__":
+    main()
