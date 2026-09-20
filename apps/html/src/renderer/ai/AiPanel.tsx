@@ -1280,7 +1280,11 @@ export function AiPanel({
               {!entry.text && entry.streaming ? (
                 <>
                   <ProviderModelBadge
-                    providerLabel={(() => { const s = settingsRef.current; const p = s ? AI_PROVIDERS.find((pr) => pr.id === s.provider) : undefined; return p?.label ?? '' })()}
+                    providerLabel={(() => {
+                      const s = settingsRef.current
+                      const p = s ? AI_PROVIDERS.find((pr) => pr.id === s.provider) : undefined
+                      return p?.label ?? ''
+                    })()}
                     model={settingsRef.current?.providers[settingsRef.current?.provider]?.model}
                   />
                   <span className="ai-typing-row">
@@ -1291,7 +1295,11 @@ export function AiPanel({
                 entry.text && (
                   <>
                     <ProviderModelBadge
-                      providerLabel={(() => { const s = settingsRef.current; const p = s ? AI_PROVIDERS.find((pr) => pr.id === s.provider) : undefined; return p?.label ?? '' })()}
+                      providerLabel={(() => {
+                        const s = settingsRef.current
+                        const p = s ? AI_PROVIDERS.find((pr) => pr.id === s.provider) : undefined
+                        return p?.label ?? ''
+                      })()}
                       model={settingsRef.current?.providers[settingsRef.current?.provider]?.model}
                     />
                     <div dir="auto">

@@ -45,7 +45,13 @@ import { createFilesSkill } from './files-skill'
 import { createElectronTransport } from './transport'
 import { useI18n, t as tModule, aiLangDirective, type StringKey } from '../i18n/locale'
 import { Markdown } from '@genoffice/ui'
-import { AiComposer, AiScopeQuote, AiTypingIndicator, type AiScopeQuoteData, ProviderModelBadge } from '@genoffice/ui'
+import {
+  AiComposer,
+  AiScopeQuote,
+  AiTypingIndicator,
+  type AiScopeQuoteData,
+  ProviderModelBadge,
+} from '@genoffice/ui'
 import { GensparkMark } from '../components/icons'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
@@ -1397,7 +1403,10 @@ export function AiPanel({
               {entry.role === 'assistant' && !entry.text && entry.streaming ? (
                 <>
                   <ProviderModelBadge
-                    providerLabel={(() => { const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider); return p?.label ?? '' })()}
+                    providerLabel={(() => {
+                      const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider)
+                      return p?.label ?? ''
+                    })()}
                     model={settings.providers[settings.provider]?.model}
                   />
                   <span className="ai-typing-row">
@@ -1409,7 +1418,10 @@ export function AiPanel({
               ) : entry.role === 'assistant' ? (
                 <>
                   <ProviderModelBadge
-                    providerLabel={(() => { const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider); return p?.label ?? '' })()}
+                    providerLabel={(() => {
+                      const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider)
+                      return p?.label ?? ''
+                    })()}
                     model={settings.providers[settings.provider]?.model}
                   />
                   <div dir="auto">

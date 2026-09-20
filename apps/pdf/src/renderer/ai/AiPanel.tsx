@@ -4,7 +4,14 @@ import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
 import { AgentLoop } from '@genoffice/agent-core'
 import { imageGenerationAvailable, type AiSettings } from '@genoffice/ai-provider/browser'
 import { AI_PROVIDERS } from '@genoffice/ai-provider'
-import { AiComposer, AiScopeQuote, AiTypingIndicator, Markdown, ProviderModelBadge, type AiScopeQuoteData } from '@genoffice/ui'
+import {
+  AiComposer,
+  AiScopeQuote,
+  AiTypingIndicator,
+  Markdown,
+  ProviderModelBadge,
+  type AiScopeQuoteData,
+} from '@genoffice/ui'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
@@ -721,7 +728,11 @@ export function AiPanel({
               {entry.text && (
                 <>
                   <ProviderModelBadge
-                    providerLabel={(() => { const s = settingsRef.current; const p = s ? AI_PROVIDERS.find((pr) => pr.id === s.provider) : undefined; return p?.label ?? '' })()}
+                    providerLabel={(() => {
+                      const s = settingsRef.current
+                      const p = s ? AI_PROVIDERS.find((pr) => pr.id === s.provider) : undefined
+                      return p?.label ?? ''
+                    })()}
                     model={settingsRef.current?.providers[settingsRef.current?.provider]?.model}
                   />
                   <div dir="auto">
