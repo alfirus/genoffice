@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
 import type { Block } from '@genoffice/docx-engine'
 import { AgentLoop, composeSkills, streamText, type AgentImage } from '@genoffice/agent-core'
+import { AI_PROVIDERS } from '@genoffice/ai-provider'
 import { imageGenerationAvailable } from '@genoffice/ai-provider/browser'
 import type { AiSettings, AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
@@ -44,7 +45,7 @@ import { createFilesSkill } from './files-skill'
 import { createElectronTransport } from './transport'
 import { useI18n, t as tModule, aiLangDirective, type StringKey } from '../i18n/locale'
 import { Markdown } from '@genoffice/ui'
-import { AiComposer, AiScopeQuote, AiTypingIndicator, type AiScopeQuoteData } from '@genoffice/ui'
+import { AiComposer, AiScopeQuote, AiTypingIndicator, type AiScopeQuoteData, ProviderModelBadge } from '@genoffice/ui'
 import { GensparkMark } from '../components/icons'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
@@ -1282,7 +1283,11 @@ export function AiPanel({
       <div className="ai-panel-header">
         <span className="ai-panel-title">
           <GensparkMark size={22} />
-          {t('aiPanelTitle')}
+          {(() => {
+            const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider)
+            const model = settings.providers[settings.provider]?.model
+            return p ? `${p.label}${model ? ` · ${model}` : ''}` : t('aiPanelTitle')
+          })()}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -1390,15 +1395,27 @@ export function AiPanel({
                 <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
               )}
               {entry.role === 'assistant' && !entry.text && entry.streaming ? (
-                <span className="ai-typing-row">
-                  <AiTypingIndicator
-                    label={entry.tools?.length ? t('aiWorking') : t('aiThinking')}
+                <>
+                  <ProviderModelBadge
+                    providerLabel={(() => { const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider); return p?.label ?? '' })()}
+                    model={settings.providers[settings.provider]?.model}
                   />
-                </span>
+                  <span className="ai-typing-row">
+                    <AiTypingIndicator
+                      label={entry.tools?.length ? t('aiWorking') : t('aiThinking')}
+                    />
+                  </span>
+                </>
               ) : entry.role === 'assistant' ? (
-                <div dir="auto">
-                  <Markdown text={entry.text} nav={docNav} />
-                </div>
+                <>
+                  <ProviderModelBadge
+                    providerLabel={(() => { const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider); return p?.label ?? '' })()}
+                    model={settings.providers[settings.provider]?.model}
+                  />
+                  <div dir="auto">
+                    <Markdown text={entry.text} nav={docNav} />
+                  </div>
+                </>
               ) : (
                 <span dir="auto">{entry.text}</span>
               )}

@@ -8,6 +8,7 @@ import {
   type ToolDisplay,
 } from '@genoffice/agent-core'
 import type { RenderSlide } from '@genoffice/pptx-render'
+import { AI_PROVIDERS } from '@genoffice/ai-provider'
 import { imageGenerationAvailable, mediaAnalysisAvailable } from '@genoffice/ai-provider/browser'
 import type { AiSettings, AttachmentAddResult, AttachmentMeta } from '../../shared/ipc'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
@@ -39,7 +40,7 @@ import {
   settingsSupportVision,
 } from './slide-qc'
 import { useI18n, t as tGlobal, aiLangDirective, type TFunc } from '../i18n/locale'
-import { AiScopeQuote, Markdown, useAiPanelPrefs, type AiScopeQuoteData } from '@genoffice/ui'
+import { AiScopeQuote, Markdown, useAiPanelPrefs, type AiScopeQuoteData, ProviderModelBadge } from '@genoffice/ui'
 import { GensparkMark } from '../components/icons'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
@@ -2078,7 +2079,11 @@ export function AiPanel({
       <div className="ai-panel-header">
         <span className="ai-panel-title">
           <GensparkMark size={22} />
-          {t('aiPanelTitle')}
+          {(() => {
+            const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider)
+            const model = settings.providers[settings.provider]?.model
+            return p ? `${p.label}${model ? ` · ${model}` : ''}` : t('aiPanelTitle')
+          })()}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -2186,15 +2191,27 @@ export function AiPanel({
                 <SentAttachments atts={entry.attachments} previews={attachmentPreviews} />
               )}
               {entry.role === 'assistant' && !entry.text && entry.streaming ? (
-                <span className="ai-typing-row">
-                  <AiTypingIndicator
-                    label={entry.tools?.length ? t('aiContinuing') : t('aiThinking')}
+                <>
+                  <ProviderModelBadge
+                    providerLabel={(() => { const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider); return p?.label ?? '' })()}
+                    model={settings.providers[settings.provider]?.model}
                   />
-                </span>
+                  <span className="ai-typing-row">
+                    <AiTypingIndicator
+                      label={entry.tools?.length ? t('aiContinuing') : t('aiThinking')}
+                    />
+                  </span>
+                </>
               ) : entry.role === 'assistant' ? (
-                <div dir="auto">
-                  <Markdown text={entry.text} />
-                </div>
+                <>
+                  <ProviderModelBadge
+                    providerLabel={(() => { const p = AI_PROVIDERS.find((pr) => pr.id === settings.provider); return p?.label ?? '' })()}
+                    model={settings.providers[settings.provider]?.model}
+                  />
+                  <div dir="auto">
+                    <Markdown text={entry.text} />
+                  </div>
+                </>
               ) : (
                 <span dir="auto">{entry.text}</span>
               )}

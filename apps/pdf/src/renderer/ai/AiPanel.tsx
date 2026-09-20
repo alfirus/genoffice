@@ -3,9 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement } from 'react'
 import { AgentLoop } from '@genoffice/agent-core'
 import { imageGenerationAvailable, type AiSettings } from '@genoffice/ai-provider/browser'
-import { AiComposer, AiScopeQuote, AiTypingIndicator, type AiScopeQuoteData } from '@genoffice/ui'
+import { AI_PROVIDERS } from '@genoffice/ai-provider'
+import { AiComposer, AiScopeQuote, AiTypingIndicator, Markdown, ProviderModelBadge, type AiScopeQuoteData } from '@genoffice/ui'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
-import { Markdown } from '@genoffice/ui'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
@@ -622,7 +622,13 @@ export function AiPanel({
       <header className="ai-panel-header">
         <span className="ai-panel-title">
           <GensparkMark size={22} />
-          Genspark
+          {(() => {
+            const s = settingsRef.current
+            if (!s) return 'Genspark'
+            const p = AI_PROVIDERS.find((pr) => pr.id === s.provider)
+            const model = s.providers[s.provider]?.model
+            return p ? `${p.label}${model ? ` · ${model}` : ''}` : 'Genspark'
+          })()}
         </span>
         <div className="ai-panel-header-actions">
           <AiPanelSideButton
@@ -713,9 +719,15 @@ export function AiPanel({
             >
               {hasTools && <ToolChipList tools={entry.tools!} />}
               {entry.text && (
-                <div dir="auto">
-                  <Markdown text={entry.text} nav={pdfNav} />
-                </div>
+                <>
+                  <ProviderModelBadge
+                    providerLabel={(() => { const s = settingsRef.current; const p = s ? AI_PROVIDERS.find((pr) => pr.id === s.provider) : undefined; return p?.label ?? '' })()}
+                    model={settingsRef.current?.providers[settingsRef.current?.provider]?.model}
+                  />
+                  <div dir="auto">
+                    <Markdown text={entry.text} nav={pdfNav} />
+                  </div>
+                </>
               )}
             </div>
           )
