@@ -14,6 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "googleapis": "^185.0.0",
     "postal-mime": "^4.0.6"
   },
   "devDependencies": {
