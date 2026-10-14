@@ -338,7 +338,7 @@ describe('FakeMailApi aiRetrieve', () => {
     })
     expect(resolved.bodies).toBeUndefined()
     expect(resolved.citations).toEqual([
-      { uid: 'm1', folderId: 'inbox', msgIdHeader: '<m1@example.com>' },
+      { uid: 'm1', folderId: 'inbox', msgIdHeader: '<m1@example.com>', accountId: 'demo' },
     ])
   })
 

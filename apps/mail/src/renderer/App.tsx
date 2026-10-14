@@ -6,7 +6,11 @@ import { FolderTree, type FolderSelection } from './folders/FolderTree'
 import { MessageList } from './list/MessageList'
 import { SearchBox } from './list/SearchBox'
 import { MessageReader, type ReaderSecurity } from './reader/MessageReader'
-import { AiPanel, type AiCitationRef } from './ai/AiPanel'
+import { AiPanel, type AiCitationRef, type AiPanelSkillContext } from './ai/AiPanel'
+import { createTriageSkill } from './ai/triage-skill'
+import { createSummarizeSkill } from './ai/summarize-skill'
+import { createComposeAssistSkill } from './ai/compose-assist-skill'
+import { createMailSearchSkill } from './ai/search-skill'
 import { ComposeHost } from './compose/ComposeHost'
 import { OutboxBanner } from './components/OutboxBanner'
 import { OutboxPanel } from './components/OutboxPanel'
@@ -32,6 +36,26 @@ export interface MailAppProps {
 const PAGE_LIMIT = 50
 
 type ListMode = 'folder' | 'search'
+
+/**
+ * P5 AI integration glue (QA-owned at merge): the four K-lane mail skills
+ * over the panel's live scope readers. Skills resolve the W-lane retrieval
+ * bridge structurally at call time (`window.mailApi.aiRetrieve`); the
+ * compose draft flows through the panel context when App wires `getDraft`.
+ */
+export function createMailAiSkills(
+  ctx: AiPanelSkillContext,
+): ReturnType<typeof createTriageSkill>[] {
+  return [
+    createTriageSkill({ getScope: () => ({ accountIds: ctx.getScope().accountIds }) }),
+    createSummarizeSkill({ getScope: () => ({ accountIds: ctx.getScope().accountIds }) }),
+    createComposeAssistSkill({
+      getScope: () => ({ accountIds: ctx.getScope().accountIds }),
+      getDraft: () => ctx.getDraft(),
+    }),
+    createMailSearchSkill({ getScope: () => ({ accountIds: ctx.getScope().accountIds }) }),
+  ]
+}
 
 export default function App({ api }: MailAppProps) {
   const { t } = useI18n()
@@ -285,6 +309,7 @@ export default function App({ api }: MailAppProps) {
           accounts={accounts}
           onOpenCitation={openCitation}
           onInsertAssist={(text) => setAssistText(text)}
+          createSkills={createMailAiSkills}
         />
         <OfflineIndicator api={resolvedApi} accountId={selection?.accountId} />
         {selection && selectedAccount && (

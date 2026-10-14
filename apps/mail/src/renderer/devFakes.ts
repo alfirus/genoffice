@@ -223,6 +223,8 @@ export interface AiRetrieveCitation {
   uid: string
   folderId: string
   msgIdHeader?: string
+  /** Scope account holding the ref (mirrors the production bridge tagging). */
+  accountId: string
 }
 
 export interface AiRetrieveResponse {
@@ -231,7 +233,7 @@ export interface AiRetrieveResponse {
   /** Headers+snippet ONLY; bodies NEVER appear here. */
   envelopes: MailEnvelope[]
   /** fetch-bodies only, cited set only. */
-  bodies?: { ref: MailMessageRef; text: string }[]
+  bodies?: { ref: MailMessageRef; accountId: string; text: string }[]
   citations: AiRetrieveCitation[]
 }
 
@@ -243,11 +245,12 @@ function envelopeHaystack(env: MailEnvelope): string {
   return [...env.from, ...env.to, env.subject, env.snippet].join('\n')
 }
 
-function toFakeCitation(env: MailEnvelope): AiRetrieveCitation {
+function toFakeCitation(env: MailEnvelope, accountId: string): AiRetrieveCitation {
   return {
     uid: env.ref.uid,
     folderId: env.ref.folderId,
     msgIdHeader: `<${env.ref.uid}@example.com>`,
+    accountId,
   }
 }
 
@@ -592,7 +595,9 @@ export class FakeMailApi implements MailApi {
         .filter((env) => scope.accountIds.includes(this.accountOf.get(envKey(env.ref)) ?? ''))
         .filter((env) => envelopeHaystack(env).toLowerCase().includes(needle))
         .slice(0, limit)
-      return { scope, envelopes, citations: envelopes.map(toFakeCitation) }
+      const cite = (env: MailEnvelope): AiRetrieveCitation =>
+        toFakeCitation(env, this.accountOf.get(envKey(env.ref)) ?? '')
+      return { scope, envelopes, citations: envelopes.map(cite) }
     }
     const refs = request.refs ?? []
     if (refs.length === 0) throw new Error(`mail: ${request.op} requires refs`)
@@ -608,15 +613,23 @@ export class FakeMailApi implements MailApi {
       )
       .filter((env): env is MailEnvelope => env !== undefined)
     if (request.op === 'cite-resolve') {
-      return { scope, envelopes, citations: envelopes.map(toFakeCitation) }
+      const cite = (env: MailEnvelope): AiRetrieveCitation =>
+        toFakeCitation(env, this.accountOf.get(envKey(env.ref)) ?? '')
+      return { scope, envelopes, citations: envelopes.map(cite) }
     }
     const bodies = refs
       .map((ref) => {
         const body = this.bodies.get(envKey(ref))
-        return body ? { ref, text: body.text } : null
+        if (!body) return null
+        return { ref, accountId: this.accountOf.get(envKey(ref)) ?? '', text: body.text }
       })
-      .filter((entry): entry is { ref: MailMessageRef; text: string } => entry !== null)
-    return { scope, envelopes, bodies, citations: envelopes.map(toFakeCitation) }
+      .filter(
+        (entry): entry is { ref: MailMessageRef; accountId: string; text: string } =>
+          entry !== null,
+      )
+    const cite = (env: MailEnvelope): AiRetrieveCitation =>
+      toFakeCitation(env, this.accountOf.get(envKey(env.ref)) ?? '')
+    return { scope, envelopes, bodies, citations: envelopes.map(cite) }
   }
 
   async attachmentFetch(): Promise<{ ok: boolean; path?: string }> {
