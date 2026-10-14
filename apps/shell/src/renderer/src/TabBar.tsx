@@ -116,6 +116,22 @@ function HtmlIcon() {
   )
 }
 
+function MailIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 240 240" fill="none" aria-hidden="true">
+      <rect width="240" height="240" rx="48" fill="#1F6FEB" />
+      <rect x="48" y="72" width="144" height="96" rx="12" stroke="#fff" strokeWidth="14" />
+      <path
+        d="M56 84L120 132L184 84"
+        stroke="#fff"
+        strokeWidth="14"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 const KIND_ICON: Record<TabSummary['kind'], ReactElement> = {
   home: <HomeIcon />,
   docs: <DocIcon />,
@@ -123,6 +139,7 @@ const KIND_ICON: Record<TabSummary['kind'], ReactElement> = {
   slides: <SlideIcon />,
   pdf: <PdfIcon />,
   markdown: <MarkdownIcon />,
+  mail: <MailIcon />,
   html: <HtmlIcon />,
 }
 
