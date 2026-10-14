@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync } from 'node:fs'
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -140,6 +140,22 @@ describe('compose-send handler', () => {
     expect(got?.path.startsWith(stageDir)).toBe(true)
     expect(existsSync(got?.path ?? '')).toBe(true)
     expect(got).not.toHaveProperty('data')
+  })
+
+  it('rejects renderer-supplied staged paths outside the stage dir (M1)', async () => {
+    const { bus, invoke } = makeBus()
+    const { deps, provider } = makeDeps()
+    registerComposeHandlers(bus, deps)
+    const outside = mkdtempSync(join(tmpdir(), 'mail-compose-outside-'))
+    const victim = join(outside, 'secret.txt')
+    writeFileSync(victim, 'topsecret')
+    await expect(
+      invoke(MAIL_CHANNELS.composeSend, {
+        ...sendReq(),
+        attachments: [{ filename: 'secret.txt', mime: 'text/plain', size: 9, path: victim }],
+      }),
+    ).rejects.toThrow('mail: staged attachment outside stage dir')
+    expect(provider.sent).toHaveLength(0)
   })
 
   it('rejects invalid sends without calling the provider', async () => {
