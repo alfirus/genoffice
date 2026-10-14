@@ -2,14 +2,26 @@ import { useEffect, useState } from 'react'
 import type { ChangeEvent, ReactElement } from 'react'
 import type { SendRequest, StagedAttachment } from '@genoffice/mail-protocols'
 import { useI18n } from '../i18n/locale'
-import type { ComposeHostProps } from './ComposeHost'
 import './compose.css'
 
-export type { ComposeHostProps } from './ComposeHost'
+/**
+ * Locked props contract from the app-shell spec (merge lane owns this
+ * file now; the Lane R `ComposeHost.ts` stub is deleted so the
+ * extensionless `./compose/ComposeHost` specifier resolves here — Vite
+ * tried `.ts` before `.tsx` and shadowed the real component).
+ */
+export interface ComposeHostProps {
+  accountId: string
+  threadKey?: string
+  initialDraft?: string
+  onDirtyChange(dirty: boolean): void
+  onSend(req: SendRequest): void
+  readOnly?: boolean
+}
 
 /**
- * Rich-text compose (Lane C owns; Lane R owns the `ComposeHost.ts` stub and
- * the `App.tsx` mount — this file never touches either). Props are the
+ * Rich-text compose (merge lane owns; Lane R owns the `App.tsx` mount —
+ * this file never touches it). Props are the
  * locked contract from the app-shell spec. Sends go out through `onSend`
  * (App wires it to `mail:compose-send`); drafts autosave through
  * `window.mailApi.saveDraft`; dirty mirrors the unsent-draft guard

@@ -237,6 +237,7 @@ import {
   setHtmlProvisionalTitleHook,
 } from '../../../html/src/main/html-main'
 import { configureMailRuntime, mailRefOf } from '../../../mail/src/main/mail-main'
+import { registerMailShellHandlers } from '../../../mail/src/main/mail-shell-host'
 import { MAIL_CHANNELS } from '../../../mail/src/shared/ipc'
 import { mailOpenMessageSchema } from '../../../mail/src/shared/ipc-schemas'
 import type {
@@ -4778,6 +4779,16 @@ registerIntegrationsIpc({
     : join(APPS_ROOT, '..', 'packages', 'cli', 'package.json'),
 })
 registerTabsIpc()
+// Mail P3 merge lane: shell-hosted mail tabs serve reads + compose from the
+// shell main process over fakes (demo mailbox, never real accounts).
+registerMailShellHandlers(
+  {
+    handle: (channel, listener) => {
+      ipcMain.handle(channel, (_event, payload) => listener(payload))
+    },
+  },
+  { openExternal: (url) => shell.openExternal(url) },
+)
 registerDroppedFilesIpc()
 
 // sheets' project:resolveChat goes through the handler registered by docs-main; the sessionId reverse lookup hooks in here

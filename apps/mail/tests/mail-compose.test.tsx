@@ -3,16 +3,7 @@ import type { ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SendRequest } from '@genoffice/mail-protocols'
-// The real implementation is `compose/ComposeHost.tsx`; the extensionless
-// specifier resolves to Lane R's `compose/ComposeHost.ts` stub (Vite tries
-// `.ts` before `.tsx`), so the real file is loaded by explicit extension.
-// The template defeats static specifier checking (which would reject the
-// extension); the merge lane removes the stub and this goes back to a
-// static import.
-const realSpecifier = `../src/renderer/compose/ComposeHost${'.tsx'}`
-const { ComposeHost } = (await import(
-  /* @vite-ignore */ realSpecifier
-)) as typeof import('../src/renderer/compose/ComposeHost')
+import { ComposeHost } from '../src/renderer/compose/ComposeHost'
 import type { ComposeHostProps } from '../src/renderer/compose/ComposeHost'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import { FakeMailApi } from '../src/renderer/devFakes'
