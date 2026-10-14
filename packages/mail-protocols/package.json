@@ -6,7 +6,8 @@
   "type": "module",
   "description": "Pure-TS mail protocol layer: MailProvider/MailStore interfaces, MIME to view-model, address handling, attachment staging, sync-state and intent-replay helpers. No Electron, no native deps.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./query": "./src/query.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
