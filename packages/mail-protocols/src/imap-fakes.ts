@@ -283,7 +283,10 @@ export class FakeImapServer implements ImapClientLike {
     const box = this.mailbox(path)
     const needle = query.text?.toLowerCase()
     const fromFilter = query.from?.toLowerCase()
+    const toFilter = query.to?.toLowerCase()
     const subjectFilter = query.subject?.toLowerCase()
+    const sinceDay = query.since ? dayStart(query.since) : undefined
+    const beforeDay = query.before ? dayStart(query.before) : undefined
     return box.messages
       .filter((m) => {
         if (needle) {
@@ -291,10 +294,19 @@ export class FakeImapServer implements ImapClientLike {
           if (!hay.includes(needle)) return false
         }
         if (fromFilter && !m.from.some((a) => a.toLowerCase().includes(fromFilter))) return false
+        if (toFilter && !m.to.some((a) => a.toLowerCase().includes(toFilter))) return false
         if (subjectFilter && !m.subject.toLowerCase().includes(subjectFilter)) return false
         if (query.seen !== undefined && m.seen !== query.seen) return false
         if (query.flagged !== undefined && m.flagged !== query.flagged) return false
         if (query.hasAttach !== undefined && m.hasAttach !== query.hasAttach) return false
+        if (sinceDay !== undefined) {
+          const date = m.date ? dayStart(m.date) : undefined
+          if (date === undefined || date < sinceDay) return false
+        }
+        if (beforeDay !== undefined) {
+          const date = m.date ? dayStart(m.date) : undefined
+          if (date === undefined || date >= beforeDay) return false
+        }
         return true
       })
       .map((m) => toData(m, this.supports('CONDSTORE')))
@@ -314,6 +326,15 @@ export class FakeImapServer implements ImapClientLike {
       throw new StaleModseqError(`FakeImapServer: modseq for ${uid} is stale`)
     }
   }
+}
+
+/** Day-granularity floor for SINCE/BEFORE comparisons; undefined when unparsable. */
+function dayStart(value: string): number | undefined {
+  const time = new Date(value).getTime()
+  if (Number.isNaN(time)) return undefined
+  const day = new Date(time)
+  day.setHours(0, 0, 0, 0)
+  return day.getTime()
 }
 
 function toData(m: FakeStoredMessage, withModseq: boolean): ImapEnvelopeData {

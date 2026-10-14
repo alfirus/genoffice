@@ -245,6 +245,30 @@ describe('send limits', () => {
     expect(attachments[0]['@odata.type']).toBe('#microsoft.graph.fileAttachment')
     expect(attachments[0]['name']).toBe('note.txt')
   })
+
+  it('prefers staged.data over disk for tiny inline parts', async () => {
+    const transport = new FakeGraphTransport()
+    let diskReads = 0
+    const driver = driverWith(transport, {
+      readStagedFile: async () => {
+        diskReads++
+        return new TextEncoder().encode('from-disk')
+      },
+    })
+    await driver.connect()
+    const inline = new TextEncoder().encode('inline-bytes')
+    await driver.send({
+      ...small(),
+      attachments: [
+        { filename: 'tiny.txt', mime: 'text/plain', size: inline.length, path: '', data: inline },
+      ],
+    })
+    expect(diskReads).toBe(0)
+    const payload = transport.sentMail[0].message
+    const attachments = payload['attachments'] as Array<Record<string, unknown>>
+    expect(attachments).toHaveLength(1)
+    expect(attachments[0]['contentBytes']).toBe(Buffer.from(inline).toString('base64'))
+  })
 })
 
 describe('round-trip matrix row: graph / staging-fake', () => {
@@ -317,12 +341,8 @@ describe('watch', () => {
     const kinds: string[] = []
     const added: string[] = []
     const watcher = driver.watch((ev) => {
-      if ('kind' in ev) {
-        kinds.push(ev.kind)
-        if (ev.kind === 'messages-added') added.push(...ev.refs.map((r) => r.uid))
-      } else if ('type' in ev) {
-        kinds.push(ev.type)
-      }
+      kinds.push(ev.kind)
+      if (ev.kind === 'messages-added') added.push(...ev.refs.map((r) => r.uid))
     })
     await new Promise((resolve) => setTimeout(resolve, 60))
     expect(kinds).toContain('sync-state')

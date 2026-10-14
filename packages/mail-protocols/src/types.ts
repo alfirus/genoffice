@@ -51,12 +51,16 @@ export interface StagedAttachment {
   filename: string
   mime: string
   size: number
-  /** Content-addressed store path (temp staging until quarantine scan). */
+  /**
+   * Content-addressed store path (temp staging until quarantine scan).
+   * Canonical payload: stageAttachment always populates this, and every
+   * driver streams from disk at send time. Never a full blob in SQLite.
+   */
   path: string
   /**
-   * Memory payload for tests and tiny inline parts. Prefer path: the driver
-   * streams from disk on send. (P1 merge union: Lane B field, kept so the
-   * sec-cleared driver is unchanged; Lina to canonicalize next phase.)
+   * Memory payload for tests and tiny inline parts. Fallback only: every
+   * driver prefers path when both are present, and production sends always
+   * stage to disk first (data never bypasses the quarantine scan).
    */
   data?: Uint8Array
 }
@@ -71,7 +75,15 @@ export interface SendRequest {
   attachments?: StagedAttachment[]
 }
 
-/** Local-first search; server expansion is always an explicit driver call. */
+/**
+ * Local-first search; server expansion is always an explicit driver call.
+ *
+ * Canonical P1 shape (all fields optional). P3 sync-engine contract:
+ * text/from/since/onlyUnread run server-side on every driver; the other
+ * six run server-side on IMAP (SEARCH builder in imap-transport.ts) and as
+ * the local matchesQuery post-filter (src/query.ts) elsewhere, so every
+ * field is honored on every driver one way or the other.
+ */
 export interface MailQuery {
   text?: string
   from?: string
@@ -88,6 +100,13 @@ export interface MailQuery {
 /**
  * Push events delivered over mail:sync-events (new mail, flag changes,
  * sync state). Payloads carry refs and flags only, never bodies or secrets.
+ *
+ * Canonical P1 shape: single `kind` discriminant (7 variants). The IMAP
+ * driver's former `type`-discriminated names map onto it without loss:
+ * message-new -> messages-added (single ref), message-updated ->
+ * flags-changed (flags filled when the poll row carries them, else {}),
+ * message-deleted -> message-deleted, resync -> resync,
+ * conflict -> conflict, sync-error -> sync-state with state 'error'.
  */
 export type MailEvent =
   | { kind: 'messages-added'; accountId: string; folderId: string; refs: MailMessageRef[] }
@@ -101,19 +120,13 @@ export type MailEvent =
       state: 'syncing' | 'idle' | 'error'
       detail?: string
     }
-  // P1 merge union: Lane B driver-event variants, kept verbatim so the
-  // sec-cleared IMAP/SMTP driver compiles and behaves unchanged. Lina to
-  // canonicalize (kind- vs type-discriminated) in the next phase.
-  | { type: 'message-new'; folderId: string; uid: string }
-  | { type: 'message-updated'; folderId: string; uid: string }
-  | { type: 'message-deleted'; folderId: string; uid: string }
   | {
-      type: 'resync'
+      kind: 'resync'
+      accountId: string
       folderId: string
       reason: 'uidvalidity-changed' | 'modseq-expired' | 'manual'
     }
-  | { type: 'conflict'; folderId: string; uid: string; detail: string }
-  | { type: 'sync-error'; folderId: string; message: string }
+  | { kind: 'conflict'; accountId: string; folderId: string; uid: string; detail: string }
 
 export interface MailProvider {
   connect(): Promise<void>
