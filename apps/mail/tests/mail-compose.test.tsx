@@ -269,4 +269,51 @@ describe('ComposeHost', () => {
     expect(to?.hasAttribute('disabled')).toBe(true)
     expect(buttonByText(container, 'Send')?.disabled).toBe(true)
   })
+
+  it('populates the body DOM from an initial draft', async () => {
+    const { container } = mountCompose({ initialDraft: 'hello draft' })
+    await settle()
+    const body = container.querySelector('.mail-compose-body')
+    if (!(body instanceof HTMLElement)) throw new Error('missing compose body')
+    expect(body.innerHTML).toContain('hello draft')
+  })
+
+  it('keeps typed body order across re-renders (caret regression)', async () => {
+    const { container } = mountCompose()
+    await settle()
+    const body = container.querySelector('.mail-compose-body')
+    if (!(body instanceof HTMLElement)) throw new Error('missing compose body')
+    // Simulate human keystrokes: the browser appends each char at the caret
+    // (end) and fires input; every setState re-renders. The old
+    // dangerouslySetInnerHTML rewrite reset the caret to offset 0, so each
+    // char landed at the start ("Hello World" -> "dlroW olleH").
+    for (const char of 'Hello World') {
+      await act(async () => {
+        body.innerHTML += char
+        body.dispatchEvent(new Event('input', { bubbles: true }))
+      })
+      await settle()
+    }
+    expect(body.innerHTML).toBe('Hello World')
+  })
+
+  it('does not rewrite the body DOM on unrelated re-renders', async () => {
+    const { container } = mountCompose()
+    await settle()
+    setBody(container, 'hello')
+    await settle()
+    const body = container.querySelector('.mail-compose-body')
+    if (!(body instanceof HTMLElement)) throw new Error('missing compose body')
+    // An in-progress edit the state mirror has not seen yet (the caret is
+    // mid-text in a real browser): re-renders from other fields must not
+    // clobber it back to the last mirrored state.
+    body.innerHTML = 'hello + unsynced edit'
+    const to = container.querySelector('#mail-compose-to')
+    if (!(to instanceof HTMLInputElement)) throw new Error('missing to field')
+    await act(async () => {
+      setInputValue(to, 'a@example.com')
+    })
+    await settle()
+    expect(body.innerHTML).toBe('hello + unsynced edit')
+  })
 })

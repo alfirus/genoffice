@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, ReactElement } from 'react'
 import type { SendRequest, StagedAttachment } from '@genoffice/mail-protocols'
 import { useI18n } from '../i18n/locale'
@@ -117,6 +117,22 @@ export function ComposeHost(props: ComposeHostProps): ReactElement {
   const [subject, setSubject] = useState(restored?.subject ?? '')
   const [bodyHtml, setBodyHtml] = useState(restored?.bodyHtml ?? initialDraft ?? '')
   const [attachments, setAttachments] = useState<PendingAttachment[]>([])
+  // Uncontrolled contentEditable: the DOM owns the body text while typing
+  // and state only mirrors it (for snapshots, dirty, and send). Rewriting
+  // innerHTML on every keystroke (e.g. via dangerouslySetInnerHTML) resets
+  // the caret to offset 0, so each typed character lands at the start and
+  // text comes out reversed. The DOM is synced only for external changes
+  // (initialDraft), never for local typing.
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const syncedDraftRef = useRef<string | undefined>(undefined)
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el || syncedDraftRef.current === initialDraft) return
+    syncedDraftRef.current = initialDraft
+    const next = parseSnapshot(initialDraft ?? '')?.bodyHtml ?? initialDraft ?? ''
+    if (el.innerHTML !== next) el.innerHTML = next
+    setBodyHtml((current) => (current === next ? current : next))
+  }, [initialDraft])
   // The pristine empty compose is clean; restored or typed content is an
   // unsent draft (dirty) until autosaved or sent.
   const [lastSaved, setLastSaved] = useState(EMPTY_SNAPSHOT)
@@ -317,11 +333,11 @@ export function ComposeHost(props: ComposeHostProps): ReactElement {
         />
       </div>
       <div
+        ref={bodyRef}
         className="mail-compose-body"
         contentEditable={readOnly === true ? false : true}
         suppressContentEditableWarning={true}
         data-placeholder={t('mail.compose.body')}
-        dangerouslySetInnerHTML={{ __html: bodyHtml }}
         onInput={(event) => setBodyHtml(event.currentTarget.innerHTML)}
       />
       {showWarn ? (
