@@ -3,6 +3,7 @@ import type { Lang } from '@genoffice/i18n'
 import type { AiStreamChunk } from '@genoffice/ai-provider'
 import { AI_CHANNELS, MAIL_CHANNELS } from '../shared/ipc'
 import type { MailApi, UiTheme } from '../shared/ipc'
+import type { OfflineStatus } from '../shared/ipc'
 import type { MailFlags, MailMessageRef, MailQuery, SendRequest } from '@genoffice/mail-protocols'
 import { isMailRef } from '../shared/mail-ref'
 
@@ -36,6 +37,22 @@ function assertSend(req: SendRequest): void {
   ) {
     throw new Error('mail: bad send request')
   }
+}
+
+function assertAccountId(accountId: string): void {
+  if (typeof accountId !== 'string' || accountId.length < 1 || accountId.length > 256) {
+    throw new Error('mail: bad account id')
+  }
+}
+
+function assertOutboxId(outboxId: string): void {
+  if (typeof outboxId !== 'string' || outboxId.length < 1 || outboxId.length > 256) {
+    throw new Error('mail: bad outbox id')
+  }
+}
+
+function assertOfflineStatus(status: OfflineStatus): void {
+  if (!status || typeof status.online !== 'boolean') throw new Error('mail: bad offline status')
 }
 
 const api: MailApi = {
@@ -85,6 +102,34 @@ const api: MailApi = {
       handler(event)
     ipcRenderer.on(MAIL_CHANNELS.syncEvents, listener)
     return () => ipcRenderer.removeListener(MAIL_CHANNELS.syncEvents, listener)
+  },
+  // P4 sync/outbox additions (Y owns): hand-rolled guards mirror the zod
+  // schemas in `../shared/ipc-schemas`; main re-validates end-to-end.
+  syncNow: (accountId, folderId) => {
+    assertAccountId(accountId)
+    return ipcRenderer.invoke(MAIL_CHANNELS.syncNow, { accountId, folderId })
+  },
+  outboxList: (accountId) => {
+    assertAccountId(accountId)
+    return ipcRenderer.invoke(MAIL_CHANNELS.outboxList, { accountId })
+  },
+  outboxRetry: (accountId, outboxId) => {
+    assertAccountId(accountId)
+    assertOutboxId(outboxId)
+    return ipcRenderer.invoke(MAIL_CHANNELS.outboxRetry, { accountId, outboxId })
+  },
+  outboxCancel: (accountId, outboxId) => {
+    assertAccountId(accountId)
+    assertOutboxId(outboxId)
+    return ipcRenderer.invoke(MAIL_CHANNELS.outboxCancel, { accountId, outboxId })
+  },
+  onOfflineStatus: (handler) => {
+    const listener = (_e: Electron.IpcRendererEvent, status: OfflineStatus) => {
+      assertOfflineStatus(status)
+      handler(status)
+    }
+    ipcRenderer.on(MAIL_CHANNELS.offlineStatus, listener)
+    return () => ipcRenderer.removeListener(MAIL_CHANNELS.offlineStatus, listener)
   },
   attachmentFetch: (attachmentPath) =>
     ipcRenderer.invoke(MAIL_CHANNELS.attachmentFetch, { attachmentPath }),
