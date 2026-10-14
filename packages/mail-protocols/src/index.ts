@@ -56,3 +56,6 @@ export {
   type IntentStep,
   type IntentResolution,
 } from './sync'
+export * from './imap-smtp-driver.js'
+export * from './imap-transport.js'
+export * from './imap-fakes.js'
