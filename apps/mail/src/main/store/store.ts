@@ -703,6 +703,15 @@ export class SqliteMailStore implements MailStore {
   }
 
   /**
+   * SyncStorePort.purgeFolder alias (T+Y contract, BUG-1): the sync engine
+   * calls purgeFolder on full resync. Row DELETEs are mirrored into the
+   * FTS index by the messages_ad trigger, so no rebuildFts is needed here.
+   */
+  purgeFolder(accountId: string, folderId: string): void {
+    this.purgeFolderMessages(accountId, folderId)
+  }
+
+  /**
    * Rebuild the FTS mirror from the messages table (runs inside resync).
    * Manual delete plus reinsert: the FTS column `fromText` maps from the
    * content column `fromJson`, so the built-in `rebuild` command (which
