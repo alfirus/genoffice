@@ -56,3 +56,32 @@ export {
   type IntentStep,
   type IntentResolution,
 } from './sync'
+export {
+  GRAPH_MAIL_SCOPES,
+  GraphServiceError,
+  toGraphError,
+  isDeltaExpiredError,
+  isAuthFailure,
+  isInvalidGrant,
+  createGraphTransport,
+  type GraphAuthProvider,
+  type GraphRequestInit,
+  type GraphTransport,
+} from './graph-transport'
+export {
+  GraphDriver,
+  GraphDriverError,
+  DEFAULT_POLL_INTERVAL_MS as GRAPH_DEFAULT_POLL_INTERVAL_MS,
+  MAX_POLL_BACKOFF_MS as GRAPH_MAX_POLL_BACKOFF_MS,
+  GRAPH_WARN_TOTAL_BYTES,
+  GRAPH_MAX_TOTAL_BYTES,
+  GRAPH_MAX_ATTACHMENT_BYTES,
+  GRAPH_MAX_RECIPIENTS,
+  type GraphDriverErrorCode,
+  type GraphSendCaps,
+  type GraphDriverConfig,
+  type GraphMessage,
+  type GraphFolder,
+  type DeltaSyncResult,
+  type SendSizeVerdict,
+} from './graph-driver'
