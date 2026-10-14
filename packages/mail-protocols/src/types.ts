@@ -53,6 +53,12 @@ export interface StagedAttachment {
   size: number
   /** Content-addressed store path (temp staging until quarantine scan). */
   path: string
+  /**
+   * Memory payload for tests and tiny inline parts. Prefer path: the driver
+   * streams from disk on send. (P1 merge union: Lane B field, kept so the
+   * sec-cleared driver is unchanged; Lina to canonicalize next phase.)
+   */
+  data?: Uint8Array
 }
 
 export interface SendRequest {
@@ -69,7 +75,13 @@ export interface SendRequest {
 export interface MailQuery {
   text?: string
   from?: string
+  to?: string
+  subject?: string
+  seen?: boolean
+  flagged?: boolean
+  hasAttach?: boolean
   since?: string
+  before?: string
   onlyUnread?: boolean
 }
 
@@ -83,6 +95,19 @@ export type MailEvent =
   | { kind: 'message-moved'; accountId: string; ref: MailMessageRef; toFolderId: string }
   | { kind: 'message-deleted'; accountId: string; ref: MailMessageRef }
   | { kind: 'sync-state'; accountId: string; folderId: string; state: 'syncing' | 'idle' | 'error'; detail?: string }
+  // P1 merge union: Lane B driver-event variants, kept verbatim so the
+  // sec-cleared IMAP/SMTP driver compiles and behaves unchanged. Lina to
+  // canonicalize (kind- vs type-discriminated) in the next phase.
+  | { type: 'message-new'; folderId: string; uid: string }
+  | { type: 'message-updated'; folderId: string; uid: string }
+  | { type: 'message-deleted'; folderId: string; uid: string }
+  | {
+      type: 'resync'
+      folderId: string
+      reason: 'uidvalidity-changed' | 'modseq-expired' | 'manual'
+    }
+  | { type: 'conflict'; folderId: string; uid: string; detail: string }
+  | { type: 'sync-error'; folderId: string; message: string }
 
 export interface MailProvider {
   connect(): Promise<void>

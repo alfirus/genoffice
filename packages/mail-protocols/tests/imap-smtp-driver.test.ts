@@ -155,7 +155,7 @@ describe('send caps', () => {
         to: ['friend@example.local'],
         subject: 'Big file',
         text: 'see attached',
-        attachments: [{ filename: 'big.bin', mime: 'application/octet-stream', size: 16 }],
+        attachments: [{ filename: 'big.bin', mime: 'application/octet-stream', size: 16, path: '' }],
       }),
     ).rejects.toMatchObject({ code: 'attachment-too-large' })
     await expect(
@@ -183,7 +183,7 @@ describe('send caps', () => {
             filename: 'staged.bin',
             mime: 'application/octet-stream',
             size: 1024,
-            blobPath: staged,
+            path: staged,
           },
         ],
       })
@@ -332,7 +332,7 @@ describe('watch: IDLE vs poll', () => {
     const sub = driver.watch((ev) => seen.push(ev))
     try {
       imap.failOnSelect = new Error('network down')
-      await waitFor(() => seen.some((ev) => ev.type === 'sync-error'))
+      await waitFor(() => seen.some((ev) => 'type' in ev && ev.type === 'sync-error'))
       imap.failOnSelect = undefined
       const uid = imap.simulateIncoming('INBOX', {
         from: ['b@example.local'],
@@ -340,7 +340,7 @@ describe('watch: IDLE vs poll', () => {
         subject: 'After outage',
       })
       await waitFor(() =>
-        seen.some((ev) => ev.type === 'message-new' && ev.folderId === 'INBOX' && ev.uid === uid),
+        seen.some((ev) => 'type' in ev && ev.type === 'message-new' && ev.folderId === 'INBOX' && ev.uid === uid),
       )
     } finally {
       sub.stop()

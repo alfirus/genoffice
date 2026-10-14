@@ -739,9 +739,9 @@ export class StaleModseqError extends Error {
 }
 
 function toSmtpAttachment(att: StagedAttachment): SmtpAttachmentPayload {
-  if (att.blobPath) {
+  if (att.path) {
     // Handed to nodemailer as a path so it streams the file at send time.
-    return { filename: att.filename, contentType: att.mime, path: att.blobPath }
+    return { filename: att.filename, contentType: att.mime, path: att.path }
   }
   return { filename: att.filename, contentType: att.mime, content: att.data ?? new Uint8Array() }
 }
