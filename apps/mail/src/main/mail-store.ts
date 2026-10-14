@@ -5,6 +5,7 @@ import type {
   SendRequest,
   SyncState,
 } from '@genoffice/mail-protocols'
+import { closeAllMailStores, closeMailStore, openMailStore } from './store/store'
 
 /**
  * In-memory MailStore stub for P3 UI dev (Lane S owns). Holds envelopes,
@@ -88,9 +89,41 @@ export class InMemoryMailStore implements MailStore {
 }
 
 let shared: InMemoryMailStore | null = null
+let sqliteRootDir: string | null = null
 
-/** Process-wide stub store for UI dev; lanes R/C register IPC handlers against it. */
-export function getMailStore(): InMemoryMailStore {
+/**
+ * Point the accessor at a profile store root (the `~/.genoffice/mail`
+ * directory holding one SQLite file per account). Until configured, the
+ * accessor keeps handing out the in-memory stub so P3 UI dev and vitest
+ * keep working unchanged. Test-only reset via resetMailStoreConfig().
+ */
+export function configureMailStoreDir(dir: string): void {
+  sqliteRootDir = dir
+}
+
+/** Test-only reset: drop the configured dir and close every open store. */
+export function resetMailStoreConfig(): void {
+  closeAllMailStores()
+  sqliteRootDir = null
+}
+
+/**
+ * Process-wide store accessor. Without an account id (or without a
+ * configured store dir) this returns the shared in-memory stub; with both,
+ * it resolves the per-account SQLite store behind the same accessor, which
+ * implements the same MailStore shape the P3 handlers already consume.
+ */
+export function getMailStore(): InMemoryMailStore
+export function getMailStore(accountId: string): MailStore
+export function getMailStore(accountId?: string): MailStore {
+  if (accountId !== undefined && sqliteRootDir !== null) {
+    return openMailStore(accountId, { rootDir: sqliteRootDir })
+  }
   shared ??= new InMemoryMailStore()
   return shared
+}
+
+/** Close one cached SQLite store (account removal path; Y lane owns). */
+export function closeSQLiteMailStore(accountId: string): void {
+  if (sqliteRootDir !== null) closeMailStore(accountId, { rootDir: sqliteRootDir })
 }
