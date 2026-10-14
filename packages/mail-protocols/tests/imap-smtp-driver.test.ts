@@ -246,7 +246,8 @@ describe('UIDVALIDITY resync', () => {
     const after = await driver.list('INBOX', { limit: 50 })
     expect(after.length).toBeGreaterThanOrEqual(3)
     expect(events).toContainEqual({
-      type: 'resync',
+      kind: 'resync',
+      accountId: 'test-account',
       folderId: 'INBOX',
       reason: 'uidvalidity-changed',
     })
@@ -310,7 +311,12 @@ describe('watch: IDLE vs poll', () => {
       to: ['me@example.local'],
       subject: 'Ping',
     })
-    expect(seen).toContainEqual({ type: 'message-new', folderId: 'INBOX', uid: '1' })
+    expect(seen).toContainEqual({
+      kind: 'messages-added',
+      accountId: 'test-account',
+      folderId: 'INBOX',
+      refs: [{ uid: '1', folderId: 'INBOX', threadId: 'INBOX:1' }],
+    })
     sub.stop()
     imap.simulateIncoming('INBOX', {
       from: ['b@example.local'],
@@ -334,7 +340,7 @@ describe('watch: IDLE vs poll', () => {
     const sub = driver.watch((ev) => seen.push(ev))
     try {
       imap.failOnSelect = new Error('network down')
-      await waitFor(() => seen.some((ev) => 'type' in ev && ev.type === 'sync-error'))
+      await waitFor(() => seen.some((ev) => ev.kind === 'sync-state' && ev.state === 'error'))
       imap.failOnSelect = undefined
       const uid = imap.simulateIncoming('INBOX', {
         from: ['b@example.local'],
@@ -344,7 +350,9 @@ describe('watch: IDLE vs poll', () => {
       await waitFor(() =>
         seen.some(
           (ev) =>
-            'type' in ev && ev.type === 'message-new' && ev.folderId === 'INBOX' && ev.uid === uid,
+            ev.kind === 'messages-added' &&
+            ev.folderId === 'INBOX' &&
+            ev.refs.some((r) => r.uid === uid),
         ),
       )
     } finally {
@@ -436,7 +444,8 @@ describe('offline intents', () => {
     expect(result.acked).toEqual([])
     expect(result.failed).toHaveLength(1)
     expect(events).toContainEqual({
-      type: 'conflict',
+      kind: 'conflict',
+      accountId: 'test-account',
       folderId: 'INBOX',
       uid: '1',
       detail: expect.any(String) as string,
@@ -463,6 +472,36 @@ describe('server search expansion', () => {
     await driver.connect()
     const hits = await driver.search('INBOX', { text: 'invoice' })
     expect(hits.map((e) => e.subject)).toEqual(['Invoice'])
+    await driver.disconnect()
+  })
+
+  it('honors the extended to/since/before fields server-side', async () => {
+    const { imap, driver } = makeHarness()
+    imap.seedMessage('INBOX', {
+      from: ['a@example.local'],
+      to: ['me@example.local'],
+      subject: 'Old note',
+      date: '2026-01-05T10:00:00.000Z',
+    })
+    imap.seedMessage('INBOX', {
+      from: ['b@example.local'],
+      to: ['boss@example.local'],
+      subject: 'Q1 report',
+      date: '2026-02-10T10:00:00.000Z',
+    })
+    imap.seedMessage('INBOX', {
+      from: ['c@example.local'],
+      to: ['boss@example.local'],
+      subject: 'Q3 report',
+      date: '2026-05-10T10:00:00.000Z',
+    })
+    await driver.connect()
+    const hits = await driver.search('INBOX', {
+      to: 'boss@example.local',
+      since: '2026-02-01',
+      before: '2026-04-01',
+    })
+    expect(hits.map((e) => e.subject)).toEqual(['Q1 report'])
     await driver.disconnect()
   })
 })

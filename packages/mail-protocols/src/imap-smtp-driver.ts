@@ -303,6 +303,11 @@ function threadIdFor(folderId: string, row: ImapEnvelopeData): string {
   return row.msgIdHeader ?? `${folderId}:${row.uid}`
 }
 
+/** Canonical event ref for a uid-only server signal (no envelope fetched). */
+function eventRef(folderId: string, uid: string): MailMessageRef {
+  return { uid, folderId, threadId: `${folderId}:${uid}` }
+}
+
 export function toEnvelope(folderId: string, row: ImapEnvelopeData): MailEnvelope {
   return {
     ref: {
@@ -451,7 +456,12 @@ export class ImapSmtpDriver implements MailProvider {
         highestModseq: status.highestModseq ?? stored.highestModseq,
         lastSyncAt: new Date().toISOString(),
       })
-      this.emit({ type: 'resync', folderId, reason: 'uidvalidity-changed' })
+      this.emit({
+        kind: 'resync',
+        accountId: this.config.accountId,
+        folderId,
+        reason: 'uidvalidity-changed',
+      })
       return rows.map((row) => toEnvelope(folderId, row))
     }
 
@@ -628,7 +638,8 @@ export class ImapSmtpDriver implements MailProvider {
       }
       if (err instanceof StaleModseqError) {
         this.emit({
-          type: 'conflict',
+          kind: 'conflict',
+          accountId: this.config.accountId,
           folderId: payload.folderId,
           uid: intent.targetUid,
           detail: `Intent ${intent.id} still stale after re-fetch; left for the user`,
@@ -646,10 +657,26 @@ export class ImapSmtpDriver implements MailProvider {
     }
     if (imap.supports('IDLE')) {
       const sub = imap.idle((ev) => {
-        if (ev.kind === 'new') notify({ type: 'message-new', folderId: ev.path, uid: ev.uid })
+        if (ev.kind === 'new')
+          notify({
+            kind: 'messages-added',
+            accountId: this.config.accountId,
+            folderId: ev.path,
+            refs: [eventRef(ev.path, ev.uid)],
+          })
         else if (ev.kind === 'updated')
-          notify({ type: 'message-updated', folderId: ev.path, uid: ev.uid })
-        else notify({ type: 'message-deleted', folderId: ev.path, uid: ev.uid })
+          notify({
+            kind: 'flags-changed',
+            accountId: this.config.accountId,
+            ref: eventRef(ev.path, ev.uid),
+            flags: {},
+          })
+        else
+          notify({
+            kind: 'message-deleted',
+            accountId: this.config.accountId,
+            ref: eventRef(ev.path, ev.uid),
+          })
       })
       return { stop: () => sub.stop() }
     }
@@ -678,7 +705,12 @@ export class ImapSmtpDriver implements MailProvider {
             highestModseq: status.highestModseq ?? stored.highestModseq,
             lastSyncAt: new Date().toISOString(),
           })
-          notify({ type: 'resync', folderId: folder.path, reason: 'uidvalidity-changed' })
+          notify({
+            kind: 'resync',
+            accountId: this.config.accountId,
+            folderId: folder.path,
+            reason: 'uidvalidity-changed',
+          })
           continue
         }
         const watermark = this.pollWatermarks.get(folder.path)
@@ -691,9 +723,31 @@ export class ImapSmtpDriver implements MailProvider {
         for (const row of rows) {
           const seen = this.pollWatermarks.get(folder.path)
           if (seen === undefined || row.uid > seen) {
-            notify({ type: 'message-new', folderId: folder.path, uid: row.uid })
+            notify({
+              kind: 'messages-added',
+              accountId: this.config.accountId,
+              folderId: folder.path,
+              refs: [
+                {
+                  uid: row.uid,
+                  folderId: folder.path,
+                  msgIdHeader: row.msgIdHeader,
+                  threadId: threadIdFor(folder.path, row),
+                },
+              ],
+            })
           } else {
-            notify({ type: 'message-updated', folderId: folder.path, uid: row.uid })
+            notify({
+              kind: 'flags-changed',
+              accountId: this.config.accountId,
+              ref: {
+                uid: row.uid,
+                folderId: folder.path,
+                msgIdHeader: row.msgIdHeader,
+                threadId: threadIdFor(folder.path, row),
+              },
+              flags: { seen: row.seen, flagged: row.flagged },
+            })
           }
         }
         const maxUid = maxUidOf(rows) ?? watermark
@@ -715,7 +769,13 @@ export class ImapSmtpDriver implements MailProvider {
         await pollOnce()
         backoff = base
       } catch (err) {
-        notify({ type: 'sync-error', folderId: '*', message: messageOf(err) })
+        notify({
+          kind: 'sync-state',
+          accountId: this.config.accountId,
+          folderId: '*',
+          state: 'error',
+          detail: messageOf(err),
+        })
         backoff = Math.min(backoff * 2, ceiling)
       }
       if (!stopped) timer = setTimeout(() => void tick(), backoff)

@@ -489,7 +489,9 @@ export class GraphDriver implements MailProvider {
       const bccRecipients = (req.bcc ?? []).map((address) => ({ emailAddress: { address } }))
       const attachments: unknown[] = []
       for (const a of req.attachments ?? []) {
-        const bytes = await this.readStagedFile(a.path)
+        // Canonical payload policy: staged path wins; staged.data is the
+        // test/tiny-inline fallback honored by every driver.
+        const bytes = a.data ?? (await this.readStagedFile(a.path))
         attachments.push({
           '@odata.type': '#microsoft.graph.fileAttachment',
           name: a.filename,

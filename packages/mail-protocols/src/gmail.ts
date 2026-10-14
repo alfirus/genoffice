@@ -598,7 +598,9 @@ export class GmailDriver implements MailProvider {
     const attachments: RawAttachmentInput[] = (req.attachments ?? []).map((staged) => ({
       filename: staged.filename,
       mime: staged.mime,
-      bytes: readFileSync(staged.path),
+      // Canonical payload policy: staged path wins; staged.data is the
+      // test/tiny-inline fallback honored by every driver.
+      bytes: staged.data ?? readFileSync(staged.path),
     }))
     const raw = buildRawMessage({
       from: this.fromAddress,
