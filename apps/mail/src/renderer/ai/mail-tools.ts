@@ -66,7 +66,9 @@ export function resolveAiBridge(): MailAiBridge | null {
   if (typeof window === 'undefined') return null
   const api = (window as unknown as { mailApi?: { aiRetrieve?: unknown } }).mailApi
   if (!api || typeof api.aiRetrieve !== 'function') return null
-  const aiRetrieve = api.aiRetrieve as MailAiBridge['aiRetrieve']
+  // Bind to the holder: class-based bridges (fakes, real impls) read
+  // instance state, and the extractor above would otherwise drop `this`.
+  const aiRetrieve = (api.aiRetrieve as MailAiBridge['aiRetrieve']).bind(api)
   return { aiRetrieve: (request) => aiRetrieve(request) }
 }
 
