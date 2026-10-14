@@ -18,7 +18,7 @@ export const RENDERER_SCHEME_PRIVILEGE: CustomScheme = {
   },
 }
 
-export type RendererHost = 'docs' | 'sheets' | 'slides' | 'pdf' | 'markdown' | 'html'
+export type RendererHost = 'docs' | 'sheets' | 'slides' | 'pdf' | 'markdown' | 'html' | 'mail'
 
 /** Dev server URL when one is configured, otherwise the module's scheme URL; the
  * query is appended either way so a dev URL that already carries params stays valid. */
