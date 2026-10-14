@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { Lang } from '@genoffice/i18n'
 import type { AiStreamChunk } from '@genoffice/ai-provider'
 import { AI_CHANNELS, MAIL_CHANNELS } from '../shared/ipc'
-import type { MailApi, UiTheme } from '../shared/ipc'
+import type { AiRetrieveRequest, MailApi, UiTheme } from '../shared/ipc'
 import type { OfflineStatus } from '../shared/ipc'
 import type { MailFlags, MailMessageRef, MailQuery, SendRequest } from '@genoffice/mail-protocols'
 import { isMailRef } from '../shared/mail-ref'
@@ -53,6 +53,37 @@ function assertOutboxId(outboxId: string): void {
 
 function assertOfflineStatus(status: OfflineStatus): void {
   if (!status || typeof status.online !== 'boolean') throw new Error('mail: bad offline status')
+}
+
+// P5 AI retrieval (W owns): hand-rolled guard mirrors mailAiRetrieveSchema;
+// main re-validates with zod end-to-end.
+function assertAiRetrieve(req: AiRetrieveRequest): void {
+  if (!req || typeof req !== 'object') throw new Error('mail: bad ai-retrieve request')
+  const scope = req.scope
+  if (
+    !scope ||
+    !Array.isArray(scope.accountIds) ||
+    scope.accountIds.length < 1 ||
+    scope.accountIds.length > 8 ||
+    scope.accountIds.some((id) => typeof id !== 'string' || id.length < 1 || id.length > 256)
+  ) {
+    throw new Error('mail: bad ai-retrieve scope')
+  }
+  if (req.op !== 'triage-headers' && req.op !== 'fetch-bodies' && req.op !== 'cite-resolve') {
+    throw new Error('mail: bad ai-retrieve op')
+  }
+  if (req.op === 'triage-headers' && typeof req.query !== 'string') {
+    throw new Error('mail: triage-headers requires a query')
+  }
+  if ((req.op === 'fetch-bodies' || req.op === 'cite-resolve') && !Array.isArray(req.refs)) {
+    throw new Error('mail: fetch-bodies and cite-resolve require refs')
+  }
+  if (
+    req.limit !== undefined &&
+    (!Number.isInteger(req.limit) || req.limit < 1 || req.limit > 200)
+  ) {
+    throw new Error('mail: bad ai-retrieve limit')
+  }
 }
 
 const api: MailApi = {
@@ -174,6 +205,11 @@ const api: MailApi = {
   aiGskStatus: () => ipcRenderer.invoke(AI_CHANNELS.gskStatus),
   aiStream: (request) => ipcRenderer.invoke(AI_CHANNELS.stream, request),
   aiStreamCancel: (requestId) => ipcRenderer.invoke(AI_CHANNELS.streamCancel, requestId),
+  // P5 scoped retrieval (W owns): guard here, zod re-validation in main.
+  aiRetrieve: (request) => {
+    assertAiRetrieve(request)
+    return ipcRenderer.invoke(MAIL_CHANNELS.aiRetrieve, request)
+  },
   onAiStream: (handler) => {
     const listener = (_e: Electron.IpcRendererEvent, chunk: AiStreamChunk) => handler(chunk)
     ipcRenderer.on(AI_CHANNELS.streamChunk, listener)

@@ -252,8 +252,36 @@ export const mailOfflineStatusSchema = z
   })
   .strict()
 
+// P5 AI retrieval (W owns): the sole new mail:ai-* channel. Streaming
+// reuses the generic ai:stream channels; this schema gates the retrieval
+// call with its account-scoped envelope end-to-end (strict throughout).
+
+export const mailAiScopeSchema = z
+  .object({ accountIds: z.array(accountIdSchema).min(1).max(8) })
+  .strict()
+
+export const mailAiRetrieveSchema = z
+  .object({
+    scope: mailAiScopeSchema,
+    op: z.enum(['triage-headers', 'fetch-bodies', 'cite-resolve']),
+    query: z.string().max(500).optional(),
+    folderId: z.string().max(256).optional(),
+    limit: z.number().int().min(1).max(200).optional(),
+    refs: z.array(mailMessageRefSchema).max(50).optional(),
+  })
+  .strict()
+  .refine((value) => (value.op === 'triage-headers' ? value.query !== undefined : true), {
+    message: 'mail: triage-headers requires a query',
+  })
+  .refine(
+    (value) =>
+      value.op === 'fetch-bodies' || value.op === 'cite-resolve' ? value.refs !== undefined : true,
+    { message: 'mail: fetch-bodies and cite-resolve require refs' },
+  )
+
 export type MailOpenMessage = z.infer<typeof mailOpenMessageSchema>
 export type MailQueryWire = z.infer<typeof mailQuerySchema>
 export type SendRequestWire = z.infer<typeof sendRequestSchema>
 export type OutboxRecordWire = z.infer<typeof outboxRecordSchema>
 export type MailEventWire = z.infer<typeof mailEventSchema>
+export type MailAiRetrieveWire = z.infer<typeof mailAiRetrieveSchema>
