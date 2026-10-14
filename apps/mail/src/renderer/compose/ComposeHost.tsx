@@ -17,6 +17,13 @@ export interface ComposeHostProps {
   onDirtyChange(dirty: boolean): void
   onSend(req: SendRequest): void
   readOnly?: boolean
+  /**
+   * P5 compose-assist insertion (UI lane owns this prop only): the latest
+   * assist text from the AI panel. An effect appends it as EDITABLE body
+   * text, then fires `onAssistConsumed` so App clears it. The human sends.
+   */
+  assistText?: string | null
+  onAssistConsumed?(): void
 }
 
 /**
@@ -105,8 +112,18 @@ function splitAddresses(raw: string): string[] {
     .filter((part) => part.length > 0)
 }
 
+/** Assist text is plain text: escape markup before it enters the body HTML. */
+function escapeHtml(raw: string): string {
+  return raw
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
 export function ComposeHost(props: ComposeHostProps): ReactElement {
   const { accountId, threadKey, initialDraft, onDirtyChange, onSend, readOnly } = props
+  const { assistText, onAssistConsumed } = props
   const { t } = useI18n()
 
   const restored =
@@ -133,6 +150,24 @@ export function ComposeHost(props: ComposeHostProps): ReactElement {
     if (el.innerHTML !== next) el.innerHTML = next
     setBodyHtml((current) => (current === next ? current : next))
   }, [initialDraft])
+  // P5 compose-assist insertion: append the assist text as EDITABLE body
+  // content (DOM + mirrored state together, exactly once per value), then
+  // hand consumption back to App. Local typing never passes through here,
+  // so the caret behavior from 34d0a468 is preserved.
+  const assistSeenRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!assistText || assistSeenRef.current === assistText) return
+    assistSeenRef.current = assistText
+    const html = escapeHtml(assistText).replace(/\n/g, '<br>')
+    setBodyHtml((current) => {
+      const next = current.length > 0 ? `${current}<br><br>${html}` : html
+      const el = bodyRef.current
+      if (el) el.innerHTML = next
+      return next
+    })
+    onAssistConsumed?.()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assistText])
   // The pristine empty compose is clean; restored or typed content is an
   // unsent draft (dirty) until autosaved or sent.
   const [lastSaved, setLastSaved] = useState(EMPTY_SNAPSHOT)

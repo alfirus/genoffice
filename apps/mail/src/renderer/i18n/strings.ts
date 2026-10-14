@@ -81,6 +81,7 @@ const en = {
   'mail.outbox.state.failed': 'Failed',
   'mail.outbox.state.sent': 'Sent',
   'mail.outbox.state.cancelled': 'Cancelled',
+  'mail.outbox.close': 'Close',
   'mail.offline.online': 'Online',
   'mail.offline.offline': 'Offline — sends queue in the outbox.',
   'mail.sync.upToDate': 'Up to date',
@@ -92,6 +93,13 @@ const en = {
   'mail.ai.askMail': 'Ask about this mail',
   'mail.ai.scopedAccount': 'Scoped to this account only.',
   'mail.ai.citationsOpen': 'Open cited message',
+  'mail.ai.title': 'Mail assistant',
+  'mail.ai.placeholder': 'Ask about this mailbox…',
+  'mail.ai.send': 'Send',
+  'mail.ai.stop': 'Stop',
+  'mail.ai.error': 'The assistant request failed.',
+  'mail.ai.emptyResult': 'No results for this scope.',
+  'mail.ai.cite': 'Open cited message',
   'mail.errors.ipcRejected': 'The mail request was rejected.',
   'mail.errors.syncError': 'Sync failed; will retry.',
   'mail.errors.resyncNotice': 'Mailbox resynced from the server.',
@@ -177,6 +185,7 @@ const zh = {
   'mail.outbox.state.failed': '失败',
   'mail.outbox.state.sent': '已发送',
   'mail.outbox.state.cancelled': '已取消',
+  'mail.outbox.close': '关闭',
   'mail.offline.online': '在线',
   'mail.offline.offline': '已离线——邮件将排队进入发件箱。',
   'mail.sync.upToDate': '已是最新',
@@ -188,6 +197,13 @@ const zh = {
   'mail.ai.askMail': '询问此邮件',
   'mail.ai.scopedAccount': '仅限此账号范围。',
   'mail.ai.citationsOpen': '打开引用的邮件',
+  'mail.ai.title': '邮件助手',
+  'mail.ai.placeholder': '询问此邮箱…',
+  'mail.ai.send': '发送',
+  'mail.ai.stop': '停止',
+  'mail.ai.error': '助手请求失败。',
+  'mail.ai.emptyResult': '此范围内没有结果。',
+  'mail.ai.cite': '打开引用的邮件',
   'mail.errors.ipcRejected': '邮件请求被拒绝。',
   'mail.errors.syncError': '同步失败，将重试。',
   'mail.errors.resyncNotice': '邮箱已从服务器重新同步。',
@@ -252,6 +268,13 @@ const ja: LocaleTable = {
   'mail.ai.askMail': 'このメールについて質問',
   'mail.ai.scopedAccount': 'このアカウントに限定。',
   'mail.ai.citationsOpen': '引用元メッセージを開く',
+  'mail.ai.title': 'メールアシスタント',
+  'mail.ai.placeholder': 'このメールボックスについて質問…',
+  'mail.ai.send': '送信',
+  'mail.ai.stop': '停止',
+  'mail.ai.error': 'アシスタントのリクエストに失敗しました。',
+  'mail.ai.emptyResult': 'この範囲に結果がありません。',
+  'mail.ai.cite': '引用元メッセージを開く',
 }
 
 const ko: LocaleTable = {
@@ -312,6 +335,13 @@ const ko: LocaleTable = {
   'mail.ai.askMail': '이 메일에 대해 질문',
   'mail.ai.scopedAccount': '이 계정으로 제한.',
   'mail.ai.citationsOpen': '인용된 메시지 열기',
+  'mail.ai.title': '메일 어시스턴트',
+  'mail.ai.placeholder': '이 메일함에 대해 질문…',
+  'mail.ai.send': '보내기',
+  'mail.ai.stop': '중지',
+  'mail.ai.error': '어시스턴트 요청에 실패했습니다.',
+  'mail.ai.emptyResult': '이 범위에 결과가 없습니다.',
+  'mail.ai.cite': '인용된 메시지 열기',
 }
 
 const fr: LocaleTable = {
@@ -372,6 +402,13 @@ const fr: LocaleTable = {
   'mail.ai.askMail': 'Interroger ce courrier',
   'mail.ai.scopedAccount': 'Limité à ce compte.',
   'mail.ai.citationsOpen': 'Ouvrir le message cité',
+  'mail.ai.title': 'Assistant courrier',
+  'mail.ai.placeholder': 'Interroger cette boîte…',
+  'mail.ai.send': 'Envoyer',
+  'mail.ai.stop': 'Arrêter',
+  'mail.ai.error': 'La requête de l’assistant a échoué.',
+  'mail.ai.emptyResult': 'Aucun résultat pour cette portée.',
+  'mail.ai.cite': 'Ouvrir le message cité',
 }
 
 const de: LocaleTable = {
@@ -432,6 +469,13 @@ const de: LocaleTable = {
   'mail.ai.askMail': 'Diese E-Mail befragen',
   'mail.ai.scopedAccount': 'Nur auf dieses Konto beschränkt.',
   'mail.ai.citationsOpen': 'Zitierte Nachricht öffnen',
+  'mail.ai.title': 'Mail-Assistent',
+  'mail.ai.placeholder': 'Dieses Postfach befragen…',
+  'mail.ai.send': 'Senden',
+  'mail.ai.stop': 'Stopp',
+  'mail.ai.error': 'Die Assistentenanfrage ist fehlgeschlagen.',
+  'mail.ai.emptyResult': 'Keine Ergebnisse für diesen Bereich.',
+  'mail.ai.cite': 'Zitierte Nachricht öffnen',
 }
 
 const es: LocaleTable = {
@@ -492,6 +536,13 @@ const es: LocaleTable = {
   'mail.ai.askMail': 'Preguntar sobre este correo',
   'mail.ai.scopedAccount': 'Limitado a esta cuenta.',
   'mail.ai.citationsOpen': 'Abrir mensaje citado',
+  'mail.ai.title': 'Asistente de correo',
+  'mail.ai.placeholder': 'Preguntar sobre este buzón…',
+  'mail.ai.send': 'Enviar',
+  'mail.ai.stop': 'Detener',
+  'mail.ai.error': 'La solicitud del asistente falló.',
+  'mail.ai.emptyResult': 'Sin resultados para este ámbito.',
+  'mail.ai.cite': 'Abrir mensaje citado',
 }
 
 const th: LocaleTable = {
@@ -552,6 +603,13 @@ const th: LocaleTable = {
   'mail.ai.askMail': 'ถามเกี่ยวกับจดหมายนี้',
   'mail.ai.scopedAccount': 'จำกัดเฉพาะบัญชีนี้',
   'mail.ai.citationsOpen': 'เปิดข้อความที่อ้างอิง',
+  'mail.ai.title': 'ผู้ช่วยจดหมาย',
+  'mail.ai.placeholder': 'ถามเกี่ยวกับกล่องจดหมายนี้…',
+  'mail.ai.send': 'ส่ง',
+  'mail.ai.stop': 'หยุด',
+  'mail.ai.error': 'คำขอของผู้ช่วยล้มเหลว',
+  'mail.ai.emptyResult': 'ไม่มีผลลัพธ์ในช่วงนี้',
+  'mail.ai.cite': 'เปิดข้อความที่อ้างอิง',
 }
 
 const id: LocaleTable = {
@@ -612,6 +670,13 @@ const id: LocaleTable = {
   'mail.ai.askMail': 'Tanya tentang surel ini',
   'mail.ai.scopedAccount': 'Terbatas pada akun ini.',
   'mail.ai.citationsOpen': 'Buka pesan yang dikutip',
+  'mail.ai.title': 'Asisten surel',
+  'mail.ai.placeholder': 'Tanya tentang kotak surat ini…',
+  'mail.ai.send': 'Kirim',
+  'mail.ai.stop': 'Berhenti',
+  'mail.ai.error': 'Permintaan asisten gagal.',
+  'mail.ai.emptyResult': 'Tidak ada hasil untuk cakupan ini.',
+  'mail.ai.cite': 'Buka pesan yang dikutip',
 }
 
 const ru: LocaleTable = {
@@ -672,6 +737,13 @@ const ru: LocaleTable = {
   'mail.ai.askMail': 'Спросить об этом письме',
   'mail.ai.scopedAccount': 'Только в пределах этой учётной записи.',
   'mail.ai.citationsOpen': 'Открыть цитируемое сообщение',
+  'mail.ai.title': 'Почтовый помощник',
+  'mail.ai.placeholder': 'Спросить об этом ящике…',
+  'mail.ai.send': 'Отправить',
+  'mail.ai.stop': 'Стоп',
+  'mail.ai.error': 'Запрос помощника не удался.',
+  'mail.ai.emptyResult': 'Нет результатов для этой области.',
+  'mail.ai.cite': 'Открыть цитируемое сообщение',
 }
 
 const ar: LocaleTable = {
@@ -732,6 +804,13 @@ const ar: LocaleTable = {
   'mail.ai.askMail': 'اسأل عن هذه الرسالة',
   'mail.ai.scopedAccount': 'مقيد بهذا الحساب فقط.',
   'mail.ai.citationsOpen': 'فتح الرسالة المقتبسة',
+  'mail.ai.title': 'مساعد البريد',
+  'mail.ai.placeholder': 'اسأل عن صندوق البريد هذا…',
+  'mail.ai.send': 'إرسال',
+  'mail.ai.stop': 'إيقاف',
+  'mail.ai.error': 'فشل طلب المساعد.',
+  'mail.ai.emptyResult': 'لا نتائج لهذا النطاق.',
+  'mail.ai.cite': 'فتح الرسالة المقتبسة',
 }
 
 const pt: LocaleTable = {
@@ -792,6 +871,13 @@ const pt: LocaleTable = {
   'mail.ai.askMail': 'Perguntar sobre este e-mail',
   'mail.ai.scopedAccount': 'Restrito a esta conta.',
   'mail.ai.citationsOpen': 'Abrir mensagem citada',
+  'mail.ai.title': 'Assistente de e-mail',
+  'mail.ai.placeholder': 'Perguntar sobre esta caixa…',
+  'mail.ai.send': 'Enviar',
+  'mail.ai.stop': 'Parar',
+  'mail.ai.error': 'O pedido do assistente falhou.',
+  'mail.ai.emptyResult': 'Sem resultados para este âmbito.',
+  'mail.ai.cite': 'Abrir mensagem citada',
 }
 
 const it: LocaleTable = {
@@ -852,6 +938,13 @@ const it: LocaleTable = {
   'mail.ai.askMail': 'Chiedi su questa e-mail',
   'mail.ai.scopedAccount': 'Limitato a questo account.',
   'mail.ai.citationsOpen': 'Apri messaggio citato',
+  'mail.ai.title': 'Assistente posta',
+  'mail.ai.placeholder': 'Chiedi su questa casella…',
+  'mail.ai.send': 'Invia',
+  'mail.ai.stop': 'Interrompi',
+  'mail.ai.error': 'La richiesta dell’assistente non è riuscita.',
+  'mail.ai.emptyResult': 'Nessun risultato per questo ambito.',
+  'mail.ai.cite': 'Apri messaggio citato',
 }
 
 const pl: LocaleTable = {
@@ -912,6 +1005,13 @@ const pl: LocaleTable = {
   'mail.ai.askMail': 'Zapytaj o tę wiadomość',
   'mail.ai.scopedAccount': 'Ograniczone do tego konta.',
   'mail.ai.citationsOpen': 'Otwórz cytowaną wiadomość',
+  'mail.ai.title': 'Asystent poczty',
+  'mail.ai.placeholder': 'Zapytaj o tę skrzynkę…',
+  'mail.ai.send': 'Wyślij',
+  'mail.ai.stop': 'Stop',
+  'mail.ai.error': 'Żądanie asystenta nie powiodło się.',
+  'mail.ai.emptyResult': 'Brak wyników dla tego zakresu.',
+  'mail.ai.cite': 'Otwórz cytowaną wiadomość',
 }
 
 const cs: LocaleTable = {
@@ -972,6 +1072,13 @@ const cs: LocaleTable = {
   'mail.ai.askMail': 'Zeptat se na tuto zprávu',
   'mail.ai.scopedAccount': 'Omezeno na tento účet.',
   'mail.ai.citationsOpen': 'Otevřít citovanou zprávu',
+  'mail.ai.title': 'Poštovní asistent',
+  'mail.ai.placeholder': 'Zeptat se na tuto schránku…',
+  'mail.ai.send': 'Odeslat',
+  'mail.ai.stop': 'Zastavit',
+  'mail.ai.error': 'Požadavek asistenta se nezdařil.',
+  'mail.ai.emptyResult': 'Žádné výsledky pro tento rozsah.',
+  'mail.ai.cite': 'Otevřít citovanou zprávu',
 }
 
 const nl: LocaleTable = {
@@ -1032,6 +1139,13 @@ const nl: LocaleTable = {
   'mail.ai.askMail': 'Vraag over deze mail',
   'mail.ai.scopedAccount': 'Beperkt tot dit account.',
   'mail.ai.citationsOpen': 'Geciteerd bericht openen',
+  'mail.ai.title': 'Mailassistent',
+  'mail.ai.placeholder': 'Vraag over dit postvak…',
+  'mail.ai.send': 'Verzenden',
+  'mail.ai.stop': 'Stoppen',
+  'mail.ai.error': 'De assistent-aanvraag is mislukt.',
+  'mail.ai.emptyResult': 'Geen resultaten voor dit bereik.',
+  'mail.ai.cite': 'Geciteerd bericht openen',
 }
 
 const ms: LocaleTable = {
@@ -1092,6 +1206,13 @@ const ms: LocaleTable = {
   'mail.ai.askMail': 'Tanya tentang mel ini',
   'mail.ai.scopedAccount': 'Terhad kepada akaun ini.',
   'mail.ai.citationsOpen': 'Buka mesej yang dipetik',
+  'mail.ai.title': 'Pembantu mel',
+  'mail.ai.placeholder': 'Tanya tentang peti mel ini…',
+  'mail.ai.send': 'Hantar',
+  'mail.ai.stop': 'Berhenti',
+  'mail.ai.error': 'Permintaan pembantu gagal.',
+  'mail.ai.emptyResult': 'Tiada hasil untuk skop ini.',
+  'mail.ai.cite': 'Buka mesej yang dipetik',
 }
 
 const he: LocaleTable = {
@@ -1152,6 +1273,13 @@ const he: LocaleTable = {
   'mail.ai.askMail': 'שאל על דואר זה',
   'mail.ai.scopedAccount': 'מוגבל לחשבון זה.',
   'mail.ai.citationsOpen': 'פתח הודעה מצוטטת',
+  'mail.ai.title': 'עוזר הדואר',
+  'mail.ai.placeholder': 'שאל על תיבה זו…',
+  'mail.ai.send': 'שליחה',
+  'mail.ai.stop': 'עצור',
+  'mail.ai.error': 'בקשת העוזר נכשלה.',
+  'mail.ai.emptyResult': 'אין תוצאות לטווח זה.',
+  'mail.ai.cite': 'פתח הודעה מצוטטת',
 }
 
 const hi: LocaleTable = {
@@ -1212,6 +1340,13 @@ const hi: LocaleTable = {
   'mail.ai.askMail': 'इस मेल के बारे में पूछें',
   'mail.ai.scopedAccount': 'केवल इस खाते तक सीमित।',
   'mail.ai.citationsOpen': 'उद्धृत संदेश खोलें',
+  'mail.ai.title': 'मेल सहायक',
+  'mail.ai.placeholder': 'इस मेलबॉक्स के बारे में पूछें…',
+  'mail.ai.send': 'भेजें',
+  'mail.ai.stop': 'रोकें',
+  'mail.ai.error': 'सहायक अनुरोध विफल।',
+  'mail.ai.emptyResult': 'इस दायरे में कोई परिणाम नहीं।',
+  'mail.ai.cite': 'उद्धृत संदेश खोलें',
 }
 
 const zhTW: LocaleTable = {
@@ -1272,6 +1407,13 @@ const zhTW: LocaleTable = {
   'mail.ai.askMail': '詢問此郵件',
   'mail.ai.scopedAccount': '僅限此帳號範圍。',
   'mail.ai.citationsOpen': '開啟引用的郵件',
+  'mail.ai.title': '郵件小幫手',
+  'mail.ai.placeholder': '詢問此信箱…',
+  'mail.ai.send': '傳送',
+  'mail.ai.stop': '停止',
+  'mail.ai.error': '小幫手要求失敗。',
+  'mail.ai.emptyResult': '此範圍內沒有結果。',
+  'mail.ai.cite': '開啟引用的郵件',
 }
 
 export const strings = {

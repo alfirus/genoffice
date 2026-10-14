@@ -5,13 +5,21 @@ import { matchesQuery } from '@genoffice/mail-protocols/query'
 import type {
   MailBody,
   MailEnvelope,
+  MailEvent,
   MailFlags,
   MailFolder,
   MailMessageRef,
   MailQuery,
   SendRequest,
 } from '@genoffice/mail-protocols'
-import type { MailAccountSummary, MailApi, MessagePage, OutboxStatus } from '../shared/ipc'
+import type {
+  MailAccountSummary,
+  MailApi,
+  MessagePage,
+  OfflineStatus,
+  OutboxRecord,
+  OutboxStatus,
+} from '../shared/ipc'
 
 /**
  * Renderer-side IPC fakes for Lane R UI dev and vitest (Lane R owns).
@@ -187,14 +195,95 @@ function noopUnsubscribe(): () => void {
   return () => undefined
 }
 
+// ── P5 AI retrieval shapes (spec sections 3-4; UI lane owns this fake) ──
+// Mirrors the W-lane `mail:ai-retrieve` contract exactly so the K lane can
+// consume this fake structurally (K `MailAiBridge`) until the real bridge
+// lands; production responses carry the same fields.
+
+/** Picker-selected account set; travels with EVERY AI call (1-8 ids). */
+export interface AiScope {
+  accountIds: string[]
+}
+
+export type AiRetrieveOp = 'triage-headers' | 'fetch-bodies' | 'cite-resolve'
+
+export interface AiRetrieveRequest {
+  scope: AiScope
+  op: AiRetrieveOp
+  /** triage-headers: header/snippet search text (required for that op). */
+  query?: string
+  folderId?: string
+  /** Default 50 (FTS_DEFAULT_LIMIT). */
+  limit?: number
+  /** fetch-bodies / cite-resolve: explicit user-cited set (required). */
+  refs?: MailMessageRef[]
+}
+
+export interface AiRetrieveCitation {
+  uid: string
+  folderId: string
+  msgIdHeader?: string
+}
+
+export interface AiRetrieveResponse {
+  /** Echo — the caller discards the result on mismatch (stale scope). */
+  scope: AiScope
+  /** Headers+snippet ONLY; bodies NEVER appear here. */
+  envelopes: MailEnvelope[]
+  /** fetch-bodies only, cited set only. */
+  bodies?: { ref: MailMessageRef; text: string }[]
+  citations: AiRetrieveCitation[]
+}
+
+function envKey(ref: MailMessageRef): string {
+  return `${ref.folderId}/${ref.uid}`
+}
+
+function envelopeHaystack(env: MailEnvelope): string {
+  return [...env.from, ...env.to, env.subject, env.snippet].join('\n')
+}
+
+function toFakeCitation(env: MailEnvelope): AiRetrieveCitation {
+  return {
+    uid: env.ref.uid,
+    folderId: env.ref.folderId,
+    msgIdHeader: `<${env.ref.uid}@example.com>`,
+  }
+}
+
+function checkFakeScope(scope: AiScope, known: string[]): string | null {
+  if (!scope || !Array.isArray(scope.accountIds) || scope.accountIds.length < 1) {
+    return 'mail: AI scope must select at least one account'
+  }
+  if (scope.accountIds.length > 8) return 'mail: AI scope selects too many accounts (max 8)'
+  for (const id of scope.accountIds) {
+    if (typeof id !== 'string' || id.length < 1 || !known.includes(id)) {
+      return 'mail: unknown account in AI scope'
+    }
+  }
+  return null
+}
+
+function clampFakeLimit(raw: number | undefined): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return 50
+  return Math.min(Math.max(Math.floor(raw), 1), 200)
+}
+
 export class FakeMailApi implements MailApi {
   private accounts: MailAccountSummary[]
   private folders: Map<string, MailFolder[]>
   private envelopes: MailEnvelope[]
   private bodies: Map<string, MailBody>
   private security: Map<string, { replyTo?: string; auth?: 'pass' | 'fail' | 'unknown' }>
-  private outbox: SendRequest[] = []
+  /** Envelope owner per folder/uid key (outbox + AI fakes filter by account). */
+  private readonly accountOf = new Map<string, string>()
+  private outboxRecords: OutboxRecord[] = []
+  private outboxSeq = 0
   private drafts: Map<string, string> = new Map()
+  private online = true
+  private offlineDetail?: string
+  private readonly offlineHandlers = new Set<(status: OfflineStatus) => void>()
+  private readonly syncHandlers = new Set<(event: MailEvent) => void>()
 
   constructor(seeds: FakeSeed[] = [defaultSeed()]) {
     this.accounts = seeds.map((seed) => ({
@@ -204,6 +293,11 @@ export class FakeMailApi implements MailApi {
     }))
     this.folders = new Map(seeds.map((seed) => [seed.accountId, [...seed.folders]]))
     this.envelopes = seeds.flatMap((seed) => seed.messages.map(toEnvelope))
+    for (const seed of seeds) {
+      for (const message of seed.messages) {
+        this.accountOf.set(`${message.folderId}/${message.uid}`, seed.accountId)
+      }
+    }
     this.bodies = new Map(
       seeds.flatMap((seed) =>
         seed.messages.map(
@@ -305,16 +399,30 @@ export class FakeMailApi implements MailApi {
   }
 
   async composeSend(req: SendRequest): Promise<{ outboxId: string }> {
-    this.outbox.push(req)
-    return { outboxId: `fake-outbox-${this.outbox.length}` }
+    this.outboxSeq += 1
+    const id = `fake-outbox-${this.outboxSeq}`
+    const owner = this.accounts[0]?.accountId ?? 'demo'
+    this.outboxRecords.push({
+      id,
+      accountId: owner,
+      req,
+      state: 'queued',
+      attempts: 0,
+      queuedAt: new Date().toISOString(),
+    })
+    return { outboxId: id }
   }
 
   async saveDraft(accountId: string, threadKey: string, text: string): Promise<void> {
     this.drafts.set(`${accountId}/${threadKey}`, text)
   }
 
-  async outboxStatus(_accountId: string): Promise<OutboxStatus> {
-    return { queued: this.outbox.length, failed: 0 }
+  async outboxStatus(accountId: string): Promise<OutboxStatus> {
+    const mine = this.outboxRecords.filter((item) => item.accountId === accountId)
+    return {
+      queued: mine.filter((item) => item.state === 'queued' || item.state === 'sending').length,
+      failed: mine.filter((item) => item.state === 'failed').length,
+    }
   }
 
   async move(ref: MailMessageRef, toFolderId: string): Promise<void> {
@@ -337,32 +445,178 @@ export class FakeMailApi implements MailApi {
     )
   }
 
-  onSyncEvent(): () => void {
-    return noopUnsubscribe()
+  onSyncEvent(handler: (event: MailEvent) => void): () => void {
+    this.syncHandlers.add(handler)
+    return () => {
+      this.syncHandlers.delete(handler)
+    }
+  }
+
+  /** Emit a sync event to subscribers (test/dev driver). */
+  emitSync(event: MailEvent): void {
+    for (const handler of this.syncHandlers) handler(event)
   }
 
   // P4 sync/outbox additions (Y owns the contract; fake stubs for dev).
-  async syncNow(): Promise<{ started: boolean }> {
-    return { started: false }
+  async syncNow(accountId: string, folderId?: string): Promise<{ started: boolean }> {
+    if (!this.online) {
+      this.emitSync({
+        kind: 'sync-state',
+        accountId,
+        folderId: folderId ?? 'inbox',
+        state: 'error',
+        detail: 'offline',
+      })
+      return { started: false }
+    }
+    this.emitSync({
+      kind: 'sync-state',
+      accountId,
+      folderId: folderId ?? 'inbox',
+      state: 'syncing',
+    })
+    // Settle back to idle on a microtask so a panel busy flag cannot stick.
+    void Promise.resolve().then(() => {
+      this.emitSync({
+        kind: 'sync-state',
+        accountId,
+        folderId: folderId ?? 'inbox',
+        state: 'idle',
+      })
+    })
+    return { started: true }
   }
 
-  async outboxList(): Promise<never[]> {
-    return []
+  async outboxList(accountId: string): Promise<OutboxRecord[]> {
+    return this.outboxRecords
+      .filter((item) => item.accountId === accountId)
+      .sort((a, b) =>
+        a.queuedAt === b.queuedAt ? (a.id < b.id ? 1 : -1) : a.queuedAt < b.queuedAt ? 1 : -1,
+      )
   }
 
   async outboxRetry(
-    _accountId: string,
+    accountId: string,
     outboxId: string,
   ): Promise<{ outboxId: string; state: string }> {
+    const record = this.outboxRecords.find(
+      (item) => item.id === outboxId && item.accountId === accountId,
+    )
+    if (record && (record.state === 'failed' || record.state === 'cancelled')) {
+      record.state = 'queued'
+      record.attempts = 0
+      record.lastError = undefined
+    }
     return { outboxId, state: 'queued' }
   }
 
-  async outboxCancel(): Promise<{ cancelled: boolean }> {
+  async outboxCancel(accountId: string, outboxId: string): Promise<{ cancelled: boolean }> {
+    const record = this.outboxRecords.find(
+      (item) => item.id === outboxId && item.accountId === accountId,
+    )
+    if (record && (record.state === 'queued' || record.state === 'failed')) {
+      record.state = 'cancelled'
+      return { cancelled: true }
+    }
     return { cancelled: false }
   }
 
-  onOfflineStatus(): () => void {
-    return noopUnsubscribe()
+  onOfflineStatus(handler: (status: OfflineStatus) => void): () => void {
+    this.offlineHandlers.add(handler)
+    // Replay the current value on subscribe (spec section 6).
+    handler({ online: this.online, detail: this.offlineDetail })
+    return () => {
+      this.offlineHandlers.delete(handler)
+    }
+  }
+
+  /** Flip connectivity and notify subscribers (test/dev driver). */
+  setOnline(online: boolean, detail?: string): void {
+    this.online = online
+    this.offlineDetail = detail
+    const status: OfflineStatus = { online, detail }
+    for (const handler of this.offlineHandlers) handler(status)
+  }
+
+  /** Seed demo outbox rows (queued/sending/failed) for shell probing. */
+  seedOutboxDemo(accountId = 'demo'): void {
+    const seeds: Array<{
+      id: string
+      subject: string
+      to: string[]
+      state: OutboxRecord['state']
+      lastError?: string
+    }> = [
+      { id: 'demo-o1', subject: 'Queued note', to: ['a@example.com'], state: 'queued' },
+      { id: 'demo-o2', subject: 'Sending note', to: ['b@example.com'], state: 'sending' },
+      {
+        id: 'demo-o3',
+        subject: 'Failed note',
+        to: ['c@example.com'],
+        state: 'failed',
+        lastError: 'smtp: connection refused',
+      },
+    ]
+    for (const [index, seed] of seeds.entries()) {
+      if (this.outboxRecords.some((item) => item.id === seed.id)) continue
+      this.outboxRecords.push({
+        id: seed.id,
+        accountId,
+        req: { to: seed.to, subject: seed.subject, text: '' },
+        state: seed.state,
+        attempts: seed.state === 'failed' ? 2 : 0,
+        lastError: seed.lastError,
+        queuedAt: `2026-10-15T04:00:${String(index).padStart(2, '0')}Z`,
+      })
+    }
+  }
+
+  // ── P5 AI retrieval fake (UI lane owns; K lane consumes structurally) ──
+  // Same spec section 4 shape the W lane bridges in production
+  // (`mail:ai-retrieve`): headers+snippet envelopes only, bodies for the
+  // cited set only, scope echoed back. Unknown accounts are rejected.
+
+  async aiRetrieve(request: AiRetrieveRequest): Promise<AiRetrieveResponse> {
+    const scopeError = checkFakeScope(
+      request.scope,
+      this.accounts.map((a) => a.accountId),
+    )
+    if (scopeError) throw new Error(scopeError)
+    const scope: AiScope = { accountIds: [...request.scope.accountIds] }
+    const limit = clampFakeLimit(request.limit)
+    if (request.op === 'triage-headers') {
+      const query = request.query?.trim() ?? ''
+      if (!query) throw new Error('mail: triage-headers requires a query')
+      const needle = query.toLowerCase()
+      const envelopes = this.envelopes
+        .filter((env) => scope.accountIds.includes(this.accountOf.get(envKey(env.ref)) ?? ''))
+        .filter((env) => envelopeHaystack(env).toLowerCase().includes(needle))
+        .slice(0, limit)
+      return { scope, envelopes, citations: envelopes.map(toFakeCitation) }
+    }
+    const refs = request.refs ?? []
+    if (refs.length === 0) throw new Error(`mail: ${request.op} requires refs`)
+    for (const ref of refs) {
+      const owner = this.accountOf.get(envKey(ref))
+      if (!owner || !scope.accountIds.includes(owner)) {
+        throw new Error('mail: ref outside the AI scope')
+      }
+    }
+    const envelopes = refs
+      .map((ref) =>
+        this.envelopes.find((env) => env.ref.uid === ref.uid && env.ref.folderId === ref.folderId),
+      )
+      .filter((env): env is MailEnvelope => env !== undefined)
+    if (request.op === 'cite-resolve') {
+      return { scope, envelopes, citations: envelopes.map(toFakeCitation) }
+    }
+    const bodies = refs
+      .map((ref) => {
+        const body = this.bodies.get(envKey(ref))
+        return body ? { ref, text: body.text } : null
+      })
+      .filter((entry): entry is { ref: MailMessageRef; text: string } => entry !== null)
+    return { scope, envelopes, bodies, citations: envelopes.map(toFakeCitation) }
   }
 
   async attachmentFetch(): Promise<{ ok: boolean; path?: string }> {
