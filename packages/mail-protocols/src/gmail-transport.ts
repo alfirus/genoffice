@@ -45,7 +45,10 @@ export function createGmailTransport(auth: GmailAuthProvider): GmailTransport {
         pageToken: args.pageToken,
       })
       return {
-        messages: (res.data.messages ?? []).map((m) => ({ id: m.id ?? '', threadId: m.threadId ?? '' })),
+        messages: (res.data.messages ?? []).map((m) => ({
+          id: m.id ?? '',
+          threadId: m.threadId ?? '',
+        })),
         nextPageToken: res.data.nextPageToken ?? undefined,
       }
     },
@@ -70,8 +73,13 @@ export function createGmailTransport(auth: GmailAuthProvider): GmailTransport {
           ? {
               mimeType: payload.mimeType ?? undefined,
               filename: payload.filename ?? undefined,
-              headers: (payload.headers ?? []).map((h) => ({ name: h.name ?? '', value: h.value ?? '' })),
-              body: payload.body ? { data: payload.body.data ?? undefined, size: payload.body.size ?? undefined } : undefined,
+              headers: (payload.headers ?? []).map((h) => ({
+                name: h.name ?? '',
+                value: h.value ?? '',
+              })),
+              body: payload.body
+                ? { data: payload.body.data ?? undefined, size: payload.body.size ?? undefined }
+                : undefined,
               parts: undefined,
             }
           : undefined,
@@ -80,13 +88,20 @@ export function createGmailTransport(auth: GmailAuthProvider): GmailTransport {
 
     async sendMessage(rawBase64Url) {
       const gmail = await clients()
-      const res = await gmail.users.messages.send({ userId: 'me', requestBody: { raw: rawBase64Url } })
+      const res = await gmail.users.messages.send({
+        userId: 'me',
+        requestBody: { raw: rawBase64Url },
+      })
       return { id: res.data.id ?? undefined }
     },
 
     async modifyMessage(id, addLabelIds, removeLabelIds) {
       const gmail = await clients()
-      await gmail.users.messages.modify({ userId: 'me', id, requestBody: { addLabelIds, removeLabelIds } })
+      await gmail.users.messages.modify({
+        userId: 'me',
+        id,
+        requestBody: { addLabelIds, removeLabelIds },
+      })
     },
 
     async trashMessage(id) {
@@ -98,8 +113,12 @@ export function createGmailTransport(auth: GmailAuthProvider): GmailTransport {
       const gmail = await clients()
       const res = await gmail.users.history.list({ userId: 'me', startHistoryId })
       const records = res.data.history ?? []
-      const slim = (m?: { id?: string | null; threadId?: string | null; labelIds?: string[] | null } | null) => ({
-        message: m ? { id: m.id ?? '', threadId: m.threadId ?? '', labelIds: m.labelIds ?? [] } : null,
+      const slim = (
+        m?: { id?: string | null; threadId?: string | null; labelIds?: string[] | null } | null,
+      ) => ({
+        message: m
+          ? { id: m.id ?? '', threadId: m.threadId ?? '', labelIds: m.labelIds ?? [] }
+          : null,
       })
       return {
         historyId: res.data.historyId ?? startHistoryId,

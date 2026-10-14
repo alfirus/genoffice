@@ -21,7 +21,10 @@ import { FakeGraphTransport, makeGraphMessage } from '../src/graph-fakes'
 
 const accountId = 'graph-test-account'
 
-function driverWith(transport: FakeGraphTransport, over: Partial<GraphDriverConfig> = {}): GraphDriver {
+function driverWith(
+  transport: FakeGraphTransport,
+  over: Partial<GraphDriverConfig> = {},
+): GraphDriver {
   let n = 0
   return new GraphDriver({
     accountId,
@@ -42,7 +45,10 @@ function seedInbox(transport: FakeGraphTransport): void {
       toRecipients: [{ emailAddress: { address: 'me@example.com' } }],
       receivedDateTime: '2026-10-14T10:00:00Z',
       bodyPreview: 'Please review the quarterly report draft',
-      body: { contentType: 'html', content: '<p>Please review the <b>quarterly</b> report draft</p>' },
+      body: {
+        contentType: 'html',
+        content: '<p>Please review the <b>quarterly</b> report draft</p>',
+      },
       hasAttachments: false,
     }),
     makeGraphMessage({
@@ -115,7 +121,10 @@ describe('delta-expiry resync fixture', () => {
     expect(stale.deltaLink).toBeUndefined()
 
     // The engine decision for an expired Graph delta token is a full resync.
-    expect(decideSync({ stored, deltaExpired: true })).toEqual({ kind: 'full-resync', reason: 'delta-expired' })
+    expect(decideSync({ stored, deltaExpired: true })).toEqual({
+      kind: 'full-resync',
+      reason: 'delta-expired',
+    })
 
     // Full resync re-lists without touching the queued tables.
     const relist = await driver.list('inbox', { limit: 25 })
@@ -133,12 +142,18 @@ describe('delta-expiry resync fixture', () => {
     const first = await driver.deltaSync('inbox')
     expect(first.deltaLink).toBeDefined()
     await driver.delete({ uid: 'm2', folderId: 'inbox', threadId: 'm2' })
-    const token = first.deltaLink?.includes('delta_inbox_v1') === true ? 'delta_inbox_v1' : transport.currentDeltaToken('inbox')
+    const token =
+      first.deltaLink?.includes('delta_inbox_v1') === true
+        ? 'delta_inbox_v1'
+        : transport.currentDeltaToken('inbox')
     const second = await driver.deltaSync('inbox', token)
     // Token rotated by the delete path only when the fake version matches;
     // either a clean delta with the removal or a resync signal is acceptable.
     if (second.resyncRequired) {
-      expect(decideSync({ stored: { accountId, folderId: 'inbox', lastSyncAt: '' }, deltaExpired: true }).kind).toBe('full-resync')
+      expect(
+        decideSync({ stored: { accountId, folderId: 'inbox', lastSyncAt: '' }, deltaExpired: true })
+          .kind,
+      ).toBe('full-resync')
     } else {
       expect(second.removed.map((r) => r.uid)).toContain('m2')
     }
@@ -190,7 +205,9 @@ describe('send limits', () => {
     const driver = driverWith(transport)
     await driver.connect()
     const to = Array.from({ length: GRAPH_MAX_RECIPIENTS + 1 }, (_, i) => `u${i}@example.com`)
-    await expect(driver.send({ ...small(), to })).rejects.toMatchObject({ code: 'too-many-recipients' })
+    await expect(driver.send({ ...small(), to })).rejects.toMatchObject({
+      code: 'too-many-recipients',
+    })
   })
 
   it('rejects oversize single attachments', async () => {
@@ -200,7 +217,14 @@ describe('send limits', () => {
     await expect(
       driver.send({
         ...small(),
-        attachments: [{ filename: 'big.bin', mime: 'application/octet-stream', size: GRAPH_MAX_ATTACHMENT_BYTES + 1, path: '/staged/big.bin' }],
+        attachments: [
+          {
+            filename: 'big.bin',
+            mime: 'application/octet-stream',
+            size: GRAPH_MAX_ATTACHMENT_BYTES + 1,
+            path: '/staged/big.bin',
+          },
+        ],
       }),
     ).rejects.toMatchObject({ code: 'attachment-too-large' })
   })
@@ -211,7 +235,9 @@ describe('send limits', () => {
     await driver.connect()
     await driver.send({
       ...small(),
-      attachments: [{ filename: 'note.txt', mime: 'text/plain', size: 12, path: '/staged/note.txt' }],
+      attachments: [
+        { filename: 'note.txt', mime: 'text/plain', size: 12, path: '/staged/note.txt' },
+      ],
     })
     const payload = transport.sentMail[0].message
     const attachments = payload['attachments'] as Array<Record<string, unknown>>
@@ -252,12 +278,18 @@ describe('round-trip matrix row: graph / staging-fake', () => {
     const unread = await driver.search('inbox', { onlyUnread: true })
     expect(unread.map((e) => e.ref.uid)).toEqual(['m1'])
 
-    await driver.setFlags({ uid: 'm1', folderId: 'inbox', threadId: 'm1' }, { seen: true, flagged: true })
+    await driver.setFlags(
+      { uid: 'm1', folderId: 'inbox', threadId: 'm1' },
+      { seen: true, flagged: true },
+    )
     expect(transport.patches).toHaveLength(1)
     expect(transport.patches[0].body).toEqual({ isRead: true, flag: { flagStatus: 'flagged' } })
 
     // answered/draft have no Graph property: transmitted patch stays empty.
-    await driver.setFlags({ uid: 'm1', folderId: 'inbox', threadId: 'm1' }, { answered: true, draft: true })
+    await driver.setFlags(
+      { uid: 'm1', folderId: 'inbox', threadId: 'm1' },
+      { answered: true, draft: true },
+    )
     expect(transport.patches).toHaveLength(1)
 
     const sent = await driver.send({ to: ['a@example.com'], subject: 're', text: 'done' })
@@ -270,7 +302,9 @@ describe('round-trip matrix row: graph / staging-fake', () => {
     await driver.delete({ uid: 'm2', folderId: 'inbox', threadId: 'm2' })
     expect(transport.allIn('inbox')).toHaveLength(0)
 
-    await expect(driver.fetch({ uid: 'm2', folderId: 'inbox', threadId: 'm2' })).rejects.toMatchObject({ code: 'conflict' })
+    await expect(
+      driver.fetch({ uid: 'm2', folderId: 'inbox', threadId: 'm2' }),
+    ).rejects.toMatchObject({ code: 'conflict' })
   })
 })
 
@@ -293,7 +327,10 @@ describe('watch', () => {
     await new Promise((resolve) => setTimeout(resolve, 60))
     expect(kinds).toContain('sync-state')
     expect(added).toHaveLength(0)
-    transport.seed('inbox', [...transport.allIn('inbox'), makeGraphMessage({ id: 'm3', subject: 'New arrival' })])
+    transport.seed('inbox', [
+      ...transport.allIn('inbox'),
+      makeGraphMessage({ id: 'm3', subject: 'New arrival' }),
+    ])
     await new Promise((resolve) => setTimeout(resolve, 80))
     watcher.stop()
     expect(added).toContain('m3')
@@ -305,7 +342,9 @@ describe('auth failures', () => {
     const transport = new FakeGraphTransport()
     const driver = driverWith(transport)
     await driver.connect()
-    transport.failNextWith(new GraphServiceError(401, 'InvalidAuthenticationToken', 'Token expired: invalid_grant'))
+    transport.failNextWith(
+      new GraphServiceError(401, 'InvalidAuthenticationToken', 'Token expired: invalid_grant'),
+    )
     try {
       await driver.list('inbox', { limit: 10 })
       throw new Error('list must throw on invalid_grant')

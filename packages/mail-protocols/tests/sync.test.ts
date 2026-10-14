@@ -34,7 +34,9 @@ describe('decideSync', () => {
   })
 
   it('stays incremental when validity holds and no expiry', () => {
-    expect(decideSync({ stored: stored(), remoteUidValidity: 100 })).toEqual({ kind: 'incremental' })
+    expect(decideSync({ stored: stored(), remoteUidValidity: 100 })).toEqual({
+      kind: 'incremental',
+    })
   })
 
   it('forces full re-fetch on UIDVALIDITY change', () => {

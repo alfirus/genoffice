@@ -2,13 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import {
-  detectRemoteRefs,
-  makeSnippet,
-  parseMimeMessage,
-  singleLine,
-  stripTags,
-} from '../src/mime'
+import { detectRemoteRefs, makeSnippet, parseMimeMessage, singleLine, stripTags } from '../src/mime'
 
 const dir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
 const load = (name: string): string => readFileSync(join(dir, name), 'utf8')

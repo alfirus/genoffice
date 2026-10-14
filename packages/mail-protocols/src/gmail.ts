@@ -125,9 +125,7 @@ export interface GmailTransport {
   sendMessage(rawBase64Url: string): Promise<{ id?: string | null }>
   modifyMessage(id: string, addLabelIds: string[], removeLabelIds: string[]): Promise<void>
   trashMessage(id: string): Promise<void>
-  listHistory(
-    startHistoryId: string,
-  ): Promise<{
+  listHistory(startHistoryId: string): Promise<{
     historyId: string
     added?: { message?: GmailMessage | null }[]
     deleted?: { message?: GmailMessage | null }[]
@@ -258,7 +256,8 @@ function addressStrings(header: string): string[] {
 /** Collect every body data chunk of a MIME type from a payload tree. */
 function collectBodies(part: GmailPayload | null | undefined, mime: string, out: string[]): void {
   if (!part) return
-  if ((part.mimeType ?? '').toLowerCase().startsWith(mime) && part.body?.data) out.push(part.body.data)
+  if ((part.mimeType ?? '').toLowerCase().startsWith(mime) && part.body?.data)
+    out.push(part.body.data)
   for (const child of part.parts ?? []) collectBodies(child, mime, out)
 }
 
@@ -382,7 +381,8 @@ export function buildRawMessage(input: RawMessageInput): string {
   lines.push('MIME-Version: 1.0')
   const hasAttach = (input.attachments?.length ?? 0) > 0
   const textB64 = Buffer.from(input.text, 'utf8').toString('base64')
-  const htmlB64 = input.html !== undefined ? Buffer.from(input.html, 'utf8').toString('base64') : undefined
+  const htmlB64 =
+    input.html !== undefined ? Buffer.from(input.html, 'utf8').toString('base64') : undefined
   const pushAlt = (target: string[]): void => {
     target.push(`--${boundaryAlt}`)
     target.push('Content-Type: text/plain; charset=UTF-8')
@@ -433,7 +433,11 @@ export function buildRawMessage(input: RawMessageInput): string {
 
 /** Encode an RFC 5322 string for users.messages.send (base64url). */
 export function encodeRawMessage(raw: string): string {
-  return Buffer.from(raw, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return Buffer.from(raw, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
 }
 
 export interface GmailDriverOptions {
@@ -523,14 +527,19 @@ export class GmailDriver implements MailProvider {
     const envelopes: MailEnvelope[] = []
     for (const entry of ids) {
       if (!entry.id) continue
-      const message = await this.call(() => this.transport.getMessage(entry.id as string, 'metadata'))
+      const message = await this.call(() =>
+        this.transport.getMessage(entry.id as string, 'metadata'),
+      )
       const hdrs = message.payload?.headers ?? []
       envelopes.push(gmailMessageToEnvelope(message, folderId, hdrs))
     }
     return envelopes
   }
 
-  async list(folderId: string, range: { afterUid?: string; limit: number }): Promise<MailEnvelope[]> {
+  async list(
+    folderId: string,
+    range: { afterUid?: string; limit: number },
+  ): Promise<MailEnvelope[]> {
     this.ensureConnected()
     const page = await this.call(() =>
       this.transport.listMessages({
@@ -720,7 +729,11 @@ export class GmailDriver implements MailProvider {
         flags: gmailLabelsToFlags(message.labelIds),
       })
     }
-    this.hooks.save({ ...stored, historyId: history.historyId, lastSyncAt: new Date().toISOString() })
+    this.hooks.save({
+      ...stored,
+      historyId: history.historyId,
+      lastSyncAt: new Date().toISOString(),
+    })
     this.emit({ kind: 'sync-state', accountId: this.accountId, folderId: 'INBOX', state: 'idle' })
   }
 

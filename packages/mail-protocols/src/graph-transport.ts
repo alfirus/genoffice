@@ -14,7 +14,11 @@
 import { Client } from '@microsoft/microsoft-graph-client'
 
 /** Delegated scopes the main-process OAuth flow must request. Pinned for review. */
-export const GRAPH_MAIL_SCOPES: readonly string[] = ['Mail.ReadWrite', 'offline_access', 'User.Read']
+export const GRAPH_MAIL_SCOPES: readonly string[] = [
+  'Mail.ReadWrite',
+  'offline_access',
+  'User.Read',
+]
 
 /**
  * Fresh delegated access token, resolved by the main-process vault caller
@@ -62,7 +66,11 @@ export function toGraphError(status: number, code: string, message: string): Gra
 export function isDeltaExpiredError(err: unknown): boolean {
   if (!(err instanceof GraphServiceError)) return false
   if (err.status === 410) return true
-  return err.code === 'resyncRequired' || err.code === 'InvalidDeltaToken' || err.code === 'syncStateNotFound'
+  return (
+    err.code === 'resyncRequired' ||
+    err.code === 'InvalidDeltaToken' ||
+    err.code === 'syncStateNotFound'
+  )
 }
 
 /** True on 401/403 authentication failures (token rejected or expired). */
@@ -83,7 +91,12 @@ export function isInvalidGrant(err: unknown): boolean {
 
 function normalizeClientError(err: unknown): GraphServiceError {
   if (err instanceof GraphServiceError) return err
-  const rec = (err ?? {}) as { statusCode?: number; status?: number; code?: string; message?: string }
+  const rec = (err ?? {}) as {
+    statusCode?: number
+    status?: number
+    code?: string
+    message?: string
+  }
   const status = rec.statusCode ?? rec.status ?? 0
   const code = rec.code ?? 'network'
   const message = rec.message ?? 'Graph request failed'
@@ -97,7 +110,12 @@ function normalizeClientError(err: unknown): GraphServiceError {
  */
 export function createGraphTransport(auth: GraphAuthProvider): GraphTransport {
   const client = Client.initWithMiddleware({ authProvider: auth })
-  const request = async <T>(method: 'get' | 'post' | 'patch' | 'delete', path: string, body?: unknown, init?: GraphRequestInit): Promise<T> => {
+  const request = async <T>(
+    method: 'get' | 'post' | 'patch' | 'delete',
+    path: string,
+    body?: unknown,
+    init?: GraphRequestInit,
+  ): Promise<T> => {
     try {
       let req = client.api(path)
       if (init?.headers !== undefined) req = req.headers(init.headers)
@@ -118,8 +136,10 @@ export function createGraphTransport(auth: GraphAuthProvider): GraphTransport {
   }
   return {
     get: <T>(path: string, init?: GraphRequestInit) => request<T>('get', path, undefined, init),
-    post: <T>(path: string, body: unknown, init?: GraphRequestInit) => request<T>('post', path, body, init),
-    patch: <T>(path: string, body: unknown, init?: GraphRequestInit) => request<T>('patch', path, body, init),
+    post: <T>(path: string, body: unknown, init?: GraphRequestInit) =>
+      request<T>('post', path, body, init),
+    patch: <T>(path: string, body: unknown, init?: GraphRequestInit) =>
+      request<T>('patch', path, body, init),
     del: async (path: string, init?: GraphRequestInit) => {
       await request<void>('delete', path, undefined, init)
     },

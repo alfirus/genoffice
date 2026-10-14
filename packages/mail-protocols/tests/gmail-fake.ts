@@ -15,7 +15,11 @@ import type {
 import type { SyncState } from '../src/types'
 
 export function b64urlText(text: string): string {
-  return Buffer.from(text, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  return Buffer.from(text, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
 }
 
 export interface SeedMessage {
@@ -105,11 +109,12 @@ export class FakeGmailTransport implements GmailTransport {
   trashed: string[] = []
   historyId = '9000'
   historyError: unknown = undefined
-  stagedHistory: { added: GmailMessage[]; deleted: GmailMessage[]; labelsChanged: GmailMessage[] } = {
-    added: [],
-    deleted: [],
-    labelsChanged: [],
-  }
+  stagedHistory: { added: GmailMessage[]; deleted: GmailMessage[]; labelsChanged: GmailMessage[] } =
+    {
+      added: [],
+      deleted: [],
+      labelsChanged: [],
+    }
 
   constructor(seeds: SeedMessage[] = []) {
     for (const seed of seeds) this.seeds.set(seed.id, seed)
@@ -146,7 +151,12 @@ export class FakeGmailTransport implements GmailTransport {
     return true
   }
 
-  async listMessages(args: { labelIds?: string[]; q?: string; maxResults: number; pageToken?: string }): Promise<{
+  async listMessages(args: {
+    labelIds?: string[]
+    q?: string
+    maxResults: number
+    pageToken?: string
+  }): Promise<{
     messages?: { id?: string | null; threadId?: string | null }[]
     nextPageToken?: string | null
   }> {
@@ -154,11 +164,15 @@ export class FakeGmailTransport implements GmailTransport {
     if (args.labelIds && args.labelIds.length > 0) {
       all = all.filter((seed) => args.labelIds?.every((label) => seed.labelIds.includes(label)))
     }
-    if (args.q && args.q.trim() !== '') all = all.filter((seed) => this.matchesQuery(seed, args.q as string))
+    if (args.q && args.q.trim() !== '')
+      all = all.filter((seed) => this.matchesQuery(seed, args.q as string))
     const start = args.pageToken ? Number.parseInt(args.pageToken, 10) || 0 : 0
     const slice = all.slice(start, start + args.maxResults)
     const next = start + args.maxResults < all.length ? String(start + args.maxResults) : undefined
-    return { messages: slice.map((seed) => ({ id: seed.id, threadId: seed.threadId })), nextPageToken: next }
+    return {
+      messages: slice.map((seed) => ({ id: seed.id, threadId: seed.threadId })),
+      nextPageToken: next,
+    }
   }
 
   private toMessage(seed: SeedMessage, full: boolean): GmailMessage {

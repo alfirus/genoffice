@@ -16,10 +16,14 @@ export const OUTGOING_WARN_BYTES = 25 * 1024 * 1024
 /** Inline preview cap; staging rejects anything larger. */
 export const INLINE_PREVIEW_CAP_BYTES = 50 * 1024 * 1024
 
+/** Control characters rejected from stored filenames (stripping them is the point). */
+// eslint-disable-next-line no-control-regex -- control characters are rejected on purpose
+const CONTROL_CHARS_RE = /[\x00-\x1f\x7f]/g
+
 /** Keep store filenames portable: strip separators and control chars. */
 export function safeFilename(filename: string): string {
   const base = filename.split(/[\\/]/).pop() ?? 'unnamed'
-  const clean = base.replace(/[\x00-\x1f\x7f]/g, '').trim().replace(/^\.+/, '')
+  const clean = base.replace(CONTROL_CHARS_RE, '').trim().replace(/^\.+/, '')
   return clean === '' ? 'unnamed' : clean
 }
 

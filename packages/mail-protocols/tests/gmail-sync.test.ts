@@ -18,7 +18,9 @@ import { FakeGmailTransport, fakeAuth, memorySyncHooks, seedInbox } from './gmai
 
 describe('history expiry detection', () => {
   it('treats Gmail 404 as expired historyId', () => {
-    expect(isHistoryExpiredError({ code: 404, message: 'Requested entity was not found.' })).toBe(true)
+    expect(isHistoryExpiredError({ code: 404, message: 'Requested entity was not found.' })).toBe(
+      true,
+    )
     expect(isHistoryExpiredError({ code: 400 })).toBe(false)
     expect(isHistoryExpiredError(undefined)).toBe(false)
   })
@@ -64,7 +66,9 @@ describe('expired historyId resync fixture', () => {
     const sub = driver.watch((ev) => events.push(ev))
     await driver.pollOnce()
     sub.stop()
-    const errorState = events.find((e) => 'kind' in e && e.kind === 'sync-state' && e.state === 'error')
+    const errorState = events.find(
+      (e) => 'kind' in e && e.kind === 'sync-state' && e.state === 'error',
+    )
     expect(errorState).toMatchObject({ detail: 'history-expired' })
     const added = events.find((e) => 'kind' in e && e.kind === 'messages-added')
     expect(added).toMatchObject({ folderId: 'INBOX' })
@@ -95,7 +99,10 @@ describe('expired historyId resync fixture', () => {
 describe('invalid_grant policy', () => {
   it('surfaces invalid_grant as GmailAuthExpiredError for vault wipe and re-auth', async () => {
     const transport = new FakeGmailTransport(seedInbox())
-    transport.historyError = { code: 401, message: 'invalid_grant: Token has been expired or revoked.' }
+    transport.historyError = {
+      code: 401,
+      message: 'invalid_grant: Token has been expired or revoked.',
+    }
     const driver = new GmailDriver({ auth: fakeAuth(), transport, pollMs: 60000 })
     const hooks = memorySyncHooks()
     hooks.save({
