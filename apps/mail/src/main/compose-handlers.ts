@@ -1,4 +1,5 @@
 import { existsSync, statSync } from 'node:fs'
+import { resolve, sep } from 'node:path'
 import { safeExternalUrl } from '@genoffice/electron-utils'
 import type {
   MailBody,
@@ -90,15 +91,24 @@ function countRecipients(req: SendRequest): number {
  * stripped so sends never carry full blobs); a missing path with a memory
  * payload is staged via the canonical `stageAttachment` (data-fallback
  * contract); a missing path without bytes is rejected.
+ *
+ * Merge-gate M1 (t_7d6ffa29): a renderer-supplied disk path is honored
+ * only when it resolves inside stageDir — otherwise a compromised
+ * renderer could exfiltrate arbitrary files through compose-send.
  */
 function normalizeAttachments(
   req: SendRequest,
   stage: (input: StageInput) => StagedAttachment,
   stageDir: string,
 ): StagedAttachment[] {
+  const root = resolve(stageDir)
   const out: StagedAttachment[] = []
   for (const att of req.attachments ?? []) {
     if (typeof att.path === 'string' && att.path.length > 0 && existsSync(att.path)) {
+      const confined = resolve(att.path)
+      if (confined !== root && !confined.startsWith(root + sep)) {
+        throw badRequest('staged attachment outside stage dir')
+      }
       const onDisk = statSync(att.path).size
       if (onDisk !== att.size) throw badRequest('staged attachment changed on disk')
       const { filename, mime, size, path } = att
