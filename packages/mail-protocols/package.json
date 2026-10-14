@@ -1,0 +1,26 @@
+{
+  "name": "@genoffice/mail-protocols",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Mail protocol drivers (IMAP/SMTP) as pure TypeScript classes with injected socket and auth",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "imapflow": "1.5.0",
+    "nodemailer": "10.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/nodemailer": "^6.4.17",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
+  }
+}
