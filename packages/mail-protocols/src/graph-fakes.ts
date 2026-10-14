@@ -84,7 +84,10 @@ export class FakeGraphTransport implements GraphTransport {
   }
 
   seed(folderId: string, msgs: GraphMessage[]): void {
-    this.messages.set(folderId, msgs.map((m) => ({ ...clone(m), parentFolderId: folderId })))
+    this.messages.set(
+      folderId,
+      msgs.map((m) => ({ ...clone(m), parentFolderId: folderId })),
+    )
   }
 
   allIn(folderId: string): GraphMessage[] {
@@ -97,7 +100,9 @@ export class FakeGraphTransport implements GraphTransport {
     return err
   }
 
-  private findMessage(id: string): { folderId: string; index: number; msg: GraphMessage } | undefined {
+  private findMessage(
+    id: string,
+  ): { folderId: string; index: number; msg: GraphMessage } | undefined {
     for (const [folderId, list] of this.messages) {
       const index = list.findIndex((m) => m.id === id)
       if (index >= 0) return { folderId, index, msg: list[index] }
@@ -132,7 +137,8 @@ export class FakeGraphTransport implements GraphTransport {
     const wellKnown = /^\/me\/mailFolders\/([^/]+)$/.exec(clean)
     if (wellKnown !== null && !clean.endsWith('/messages') && !clean.endsWith('/messages/delta')) {
       const folder = this.folders.find((f) => f.id === decodeURIComponent(wellKnown[1]))
-      if (folder === undefined) throw new GraphServiceError(404, 'ErrorItemNotFound', 'Folder not found')
+      if (folder === undefined)
+        throw new GraphServiceError(404, 'ErrorItemNotFound', 'Folder not found')
       return clone({ id: folder.id }) as T
     }
 
@@ -149,13 +155,22 @@ export class FakeGraphTransport implements GraphTransport {
       }
       if (token === null) {
         const value = this.allIn(folderId)
-        return clone({ value, '@odata.deltaLink': `https://graph.microsoft.com/v1.0/delta?token=${this.currentDeltaToken(folderId)}` }) as T
+        return clone({
+          value,
+          '@odata.deltaLink': `https://graph.microsoft.com/v1.0/delta?token=${this.currentDeltaToken(folderId)}`,
+        }) as T
       }
       this.deltaVersion += 1
-      const value = [...this.deltaChanges.map(clone), ...this.deltaRemovals.map((id) => ({ id, '@removed': { reason: 'deleted' } }))]
+      const value = [
+        ...this.deltaChanges.map(clone),
+        ...this.deltaRemovals.map((id) => ({ id, '@removed': { reason: 'deleted' } })),
+      ]
       this.deltaChanges = []
       this.deltaRemovals = []
-      return clone({ value, '@odata.deltaLink': `https://graph.microsoft.com/v1.0/delta?token=${this.currentDeltaToken(folderId)}` }) as T
+      return clone({
+        value,
+        '@odata.deltaLink': `https://graph.microsoft.com/v1.0/delta?token=${this.currentDeltaToken(folderId)}`,
+      }) as T
     }
 
     const folderMessages = /^\/me\/mailFolders\/([^/]+)\/messages$/.exec(clean)
@@ -174,15 +189,22 @@ export class FakeGraphTransport implements GraphTransport {
     const single = /^\/me\/messages\/([^/]+)$/.exec(clean)
     if (single !== null) {
       const found = this.findMessage(decodeURIComponent(single[1]))
-      if (found === undefined) throw new GraphServiceError(404, 'ErrorItemNotFound', 'Message not found')
+      if (found === undefined)
+        throw new GraphServiceError(404, 'ErrorItemNotFound', 'Message not found')
       return clone(found.msg) as T
     }
 
     throw new GraphServiceError(400, 'BadRequest', `Fake has no route for ${clean}`)
   }
 
-  private page(folderId: string, skip: number, top: number): { value: GraphMessage[]; '@odata.nextLink'?: string } {
-    const list = this.allIn(folderId).sort((a, b) => (b.receivedDateTime ?? '').localeCompare(a.receivedDateTime ?? ''))
+  private page(
+    folderId: string,
+    skip: number,
+    top: number,
+  ): { value: GraphMessage[]; '@odata.nextLink'?: string } {
+    const list = this.allIn(folderId).sort((a, b) =>
+      (b.receivedDateTime ?? '').localeCompare(a.receivedDateTime ?? ''),
+    )
     return this.pageList(folderId, list, skip, top)
   }
 
@@ -207,7 +229,8 @@ export class FakeGraphTransport implements GraphTransport {
     const sinceMatch = /received>=([0-9-]+)/.exec(search)
     const quoted = /"([^"]*)"/.exec(search)
     return list.filter((m) => {
-      if (fromMatch !== null && !(m.from?.emailAddress?.address ?? '').includes(fromMatch[1])) return false
+      if (fromMatch !== null && !(m.from?.emailAddress?.address ?? '').includes(fromMatch[1]))
+        return false
       if (unreadOnly && (m.isRead ?? false)) return false
       if (sinceMatch !== null && (m.receivedDateTime ?? '') < sinceMatch[1]) return false
       if (quoted !== null) {
@@ -232,7 +255,10 @@ export class FakeGraphTransport implements GraphTransport {
 
     if (clean === '/me/sendMail') {
       const payload = body as { message: Record<string, unknown>; saveToSentItems: unknown }
-      this.sentMail.push({ message: clone(payload.message), saveToSentItems: payload.saveToSentItems })
+      this.sentMail.push({
+        message: clone(payload.message),
+        saveToSentItems: payload.saveToSentItems,
+      })
       const sent = this.messages.get('sentitems') ?? []
       fakeIdCounter += 1
       sent.push(
@@ -249,7 +275,8 @@ export class FakeGraphTransport implements GraphTransport {
     const moveMatch = /^\/me\/messages\/([^/]+)\/move$/.exec(clean)
     if (moveMatch !== null) {
       const found = this.findMessage(decodeURIComponent(moveMatch[1]))
-      if (found === undefined) throw new GraphServiceError(404, 'ErrorItemNotFound', 'Message not found')
+      if (found === undefined)
+        throw new GraphServiceError(404, 'ErrorItemNotFound', 'Message not found')
       const destinationId = (body as { destinationId: unknown }).destinationId as string
       this.moves.push({ id: found.msg.id, destinationId })
       const [moved] = this.messages.get(found.folderId)?.splice(found.index, 1) ?? []
@@ -270,9 +297,11 @@ export class FakeGraphTransport implements GraphTransport {
     if (failure !== undefined) throw failure
     const { clean } = this.split(path)
     const single = /^\/me\/messages\/([^/]+)$/.exec(clean)
-    if (single === null) throw new GraphServiceError(400, 'BadRequest', `Fake has no route for ${clean}`)
+    if (single === null)
+      throw new GraphServiceError(400, 'BadRequest', `Fake has no route for ${clean}`)
     const found = this.findMessage(decodeURIComponent(single[1]))
-    if (found === undefined) throw new GraphServiceError(404, 'ErrorItemNotFound', 'Message not found')
+    if (found === undefined)
+      throw new GraphServiceError(404, 'ErrorItemNotFound', 'Message not found')
     const patch = body as { isRead?: boolean; flag?: { flagStatus?: string } }
     if (patch.isRead !== undefined) found.msg.isRead = patch.isRead
     if (patch.flag?.flagStatus !== undefined) found.msg.flag = { flagStatus: patch.flag.flagStatus }
@@ -285,9 +314,11 @@ export class FakeGraphTransport implements GraphTransport {
     if (failure !== undefined) throw failure
     const { clean } = this.split(path)
     const single = /^\/me\/messages\/([^/]+)$/.exec(clean)
-    if (single === null) throw new GraphServiceError(400, 'BadRequest', `Fake has no route for ${clean}`)
+    if (single === null)
+      throw new GraphServiceError(400, 'BadRequest', `Fake has no route for ${clean}`)
     const found = this.findMessage(decodeURIComponent(single[1]))
-    if (found === undefined) throw new GraphServiceError(404, 'ErrorItemNotFound', 'Message not found')
+    if (found === undefined)
+      throw new GraphServiceError(404, 'ErrorItemNotFound', 'Message not found')
     this.messages.get(found.folderId)?.splice(found.index, 1)
     this.deletes.push(found.msg.id)
     this.deltaRemovals.push(found.msg.id)

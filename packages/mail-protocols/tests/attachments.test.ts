@@ -43,7 +43,12 @@ describe('stageAttachment', () => {
   it('writes a content-addressed file and returns the staged handle', () => {
     const stageDir = mkdtempSync(join(tmpdir(), 'mail-stage-'))
     const bytes = new TextEncoder().encode('staged bytes')
-    const staged = stageAttachment({ filename: '../../notes.txt', mime: 'text/plain', bytes, stageDir })
+    const staged = stageAttachment({
+      filename: '../../notes.txt',
+      mime: 'text/plain',
+      bytes,
+      stageDir,
+    })
     expect(staged.filename).toBe('notes.txt')
     expect(staged.size).toBe(bytes.byteLength)
     expect(existsSync(staged.path)).toBe(true)
@@ -54,6 +59,8 @@ describe('stageAttachment', () => {
   it('throws on oversize input without writing', () => {
     const stageDir = mkdtempSync(join(tmpdir(), 'mail-stage-'))
     const bytes = new Uint8Array(INLINE_PREVIEW_CAP_BYTES + 1)
-    expect(() => stageAttachment({ filename: 'big.bin', mime: 'application/octet-stream', bytes, stageDir })).toThrow()
+    expect(() =>
+      stageAttachment({ filename: 'big.bin', mime: 'application/octet-stream', bytes, stageDir }),
+    ).toThrow()
   })
 })

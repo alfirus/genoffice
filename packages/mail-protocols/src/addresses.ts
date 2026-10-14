@@ -46,7 +46,9 @@ function decodeWord(word: string): string {
     if (enc.toUpperCase() === 'B') {
       return Buffer.from(data, 'base64').toString(charset as BufferEncoding)
     }
-    const qp = data.replace(/_/g, ' ').replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    const qp = data
+      .replace(/_/g, ' ')
+      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
     return Buffer.from(qp, 'latin1').toString(charset as BufferEncoding)
   } catch {
     return word

@@ -41,7 +41,8 @@ function toAddresses(list: Address[] | Address | undefined): MailAddress[] {
   const flat: MailAddress[] = []
   for (const a of arr) {
     if (a.group) {
-      for (const m of a.group) flat.push({ name: decodeDisplayName(m.name ?? ''), address: m.address ?? '' })
+      for (const m of a.group)
+        flat.push({ name: decodeDisplayName(m.name ?? ''), address: m.address ?? '' })
     } else if (a.address) {
       flat.push({ name: decodeDisplayName(a.name ?? ''), address: a.address })
     }

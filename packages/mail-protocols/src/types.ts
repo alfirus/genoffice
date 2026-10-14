@@ -94,7 +94,13 @@ export type MailEvent =
   | { kind: 'flags-changed'; accountId: string; ref: MailMessageRef; flags: Partial<MailFlags> }
   | { kind: 'message-moved'; accountId: string; ref: MailMessageRef; toFolderId: string }
   | { kind: 'message-deleted'; accountId: string; ref: MailMessageRef }
-  | { kind: 'sync-state'; accountId: string; folderId: string; state: 'syncing' | 'idle' | 'error'; detail?: string }
+  | {
+      kind: 'sync-state'
+      accountId: string
+      folderId: string
+      state: 'syncing' | 'idle' | 'error'
+      detail?: string
+    }
   // P1 merge union: Lane B driver-event variants, kept verbatim so the
   // sec-cleared IMAP/SMTP driver compiles and behaves unchanged. Lina to
   // canonicalize (kind- vs type-discriminated) in the next phase.

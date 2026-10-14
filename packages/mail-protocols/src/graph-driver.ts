@@ -76,7 +76,11 @@ export class GraphDriverError extends Error {
    * never wipes or re-authenticates itself.
    */
   readonly needsReauth: boolean
-  constructor(code: GraphDriverErrorCode, message: string, options?: { cause?: unknown; needsReauth?: boolean }) {
+  constructor(
+    code: GraphDriverErrorCode,
+    message: string,
+    options?: { cause?: unknown; needsReauth?: boolean },
+  ) {
     super(message)
     this.name = 'GraphDriverError'
     this.code = code
@@ -207,20 +211,34 @@ function isNotFound(err: unknown): boolean {
 function mapServiceError(err: unknown, ref?: string): GraphDriverError {
   if (err instanceof GraphDriverError) return err
   if (isDeltaExpiredError(err)) {
-    return new GraphDriverError('delta-expired', 'Graph delta token expired; full resync required', { cause: err })
+    return new GraphDriverError(
+      'delta-expired',
+      'Graph delta token expired; full resync required',
+      { cause: err },
+    )
   }
   if (err instanceof GraphServiceError) {
     if (isInvalidGrant(err)) {
-      return new GraphDriverError('auth', 'Graph credential rejected (invalid_grant); wipe and re-auth in main', {
-        cause: err,
-        needsReauth: true,
-      })
+      return new GraphDriverError(
+        'auth',
+        'Graph credential rejected (invalid_grant); wipe and re-auth in main',
+        {
+          cause: err,
+          needsReauth: true,
+        },
+      )
     }
     if (isAuthFailure(err)) {
-      return new GraphDriverError('auth', `Graph authentication failed: ${err.code}`, { cause: err })
+      return new GraphDriverError('auth', `Graph authentication failed: ${err.code}`, {
+        cause: err,
+      })
     }
     if (err.status === 404) {
-      return new GraphDriverError('conflict', `Graph target gone${ref === undefined ? '' : `: ${ref}`}`, { cause: err })
+      return new GraphDriverError(
+        'conflict',
+        `Graph target gone${ref === undefined ? '' : `: ${ref}`}`,
+        { cause: err },
+      )
     }
     if (err.status === 429 || err.status >= 500 || err.status === 0) {
       return new GraphDriverError('network', `Graph transport failure: ${err.code}`, { cause: err })
@@ -265,7 +283,10 @@ export class GraphDriver implements MailProvider {
   }
 
   private toEnvelope(msg: GraphMessage, folderId: string): MailEnvelope {
-    const text = msg.body?.contentType === 'text' ? (msg.body.content ?? '') : stripTags(msg.body?.content ?? '')
+    const text =
+      msg.body?.contentType === 'text'
+        ? (msg.body.content ?? '')
+        : stripTags(msg.body?.content ?? '')
     return {
       ref: {
         uid: msg.id,
@@ -312,7 +333,9 @@ export class GraphDriver implements MailProvider {
       const roleById = new Map<string, MailFolder['role']>()
       for (const wk of WELL_KNOWN_ROLES) {
         try {
-          const known = await this.transport.get<GraphFolder>(`/me/mailFolders/${wk.name}?$select=id`)
+          const known = await this.transport.get<GraphFolder>(
+            `/me/mailFolders/${wk.name}?$select=id`,
+          )
           if (known.id !== undefined) roleById.set(known.id, wk.role)
         } catch (err) {
           if (!isNotFound(err)) throw err
@@ -329,7 +352,10 @@ export class GraphDriver implements MailProvider {
     }
   }
 
-  async list(folderId: string, range: { afterUid?: string; limit: number }): Promise<MailEnvelope[]> {
+  async list(
+    folderId: string,
+    range: { afterUid?: string; limit: number },
+  ): Promise<MailEnvelope[]> {
     this.requireConnected()
     try {
       let path: string
@@ -361,7 +387,8 @@ export class GraphDriver implements MailProvider {
   async search(folderId: string, query: MailQuery): Promise<MailEnvelope[]> {
     this.requireConnected()
     const parts: string[] = []
-    if (query.text !== undefined && query.text !== '') parts.push(`"${query.text.replace(/"/g, '')}"`)
+    if (query.text !== undefined && query.text !== '')
+      parts.push(`"${query.text.replace(/"/g, '')}"`)
     if (query.from !== undefined && query.from !== '') parts.push(`from:${query.from}`)
     if (query.since !== undefined && query.since !== '') parts.push(`received>=${query.since}`)
     if (query.onlyUnread === true) parts.push('isRead:false')
@@ -385,7 +412,8 @@ export class GraphDriver implements MailProvider {
         `/me/messages/${encodeURIComponent(ref.uid)}?$select=${MESSAGE_SELECT}`,
       )
       const html = msg.body?.contentType === 'text' ? undefined : msg.body?.content
-      const text = msg.body?.contentType === 'text' ? (msg.body.content ?? '') : stripTags(html ?? '')
+      const text =
+        msg.body?.contentType === 'text' ? (msg.body.content ?? '') : stripTags(html ?? '')
       return { text }
     } catch (err) {
       throw mapServiceError(err, ref.uid)
@@ -419,7 +447,9 @@ export class GraphDriver implements MailProvider {
     for (const a of req.attachments ?? []) totalBytes += a.size
     const warnings: string[] = []
     if (totalBytes > this.caps.warnTotalBytes) {
-      warnings.push(`Outgoing mail is ${(totalBytes / 1048576).toFixed(1)} MiB; Graph sendMail caps at 4 MiB`)
+      warnings.push(
+        `Outgoing mail is ${(totalBytes / 1048576).toFixed(1)} MiB; Graph sendMail caps at 4 MiB`,
+      )
     }
     return { totalBytes, recipients, verdict: warnings.length === 0 ? 'ok' : 'warn', warnings }
   }
@@ -469,7 +499,10 @@ export class GraphDriver implements MailProvider {
       }
       const message: Record<string, unknown> = {
         subject: req.subject,
-        body: { contentType: req.html === undefined ? 'Text' : 'HTML', content: req.html ?? req.text },
+        body: {
+          contentType: req.html === undefined ? 'Text' : 'HTML',
+          content: req.html ?? req.text,
+        },
         toRecipients,
       }
       if (ccRecipients.length > 0) message['ccRecipients'] = ccRecipients
@@ -498,7 +531,8 @@ export class GraphDriver implements MailProvider {
     this.requireConnected()
     const patch: Record<string, unknown> = {}
     if (flags.seen !== undefined) patch['isRead'] = flags.seen
-    if (flags.flagged !== undefined) patch['flag'] = { flagStatus: flags.flagged ? 'flagged' : 'notFlagged' }
+    if (flags.flagged !== undefined)
+      patch['flag'] = { flagStatus: flags.flagged ? 'flagged' : 'notFlagged' }
     // answered/draft have no Graph property; they stay local to MailStore.
     if (Object.keys(patch).length === 0) return
     try {
@@ -524,7 +558,12 @@ export class GraphDriver implements MailProvider {
    */
   async deltaSync(folderId: string, deltaToken?: string): Promise<DeltaSyncResult> {
     this.requireConnected()
-    const empty: DeltaSyncResult = { envelopes: [], removed: [], flagChanges: [], resyncRequired: false }
+    const empty: DeltaSyncResult = {
+      envelopes: [],
+      removed: [],
+      flagChanges: [],
+      resyncRequired: false,
+    }
     try {
       const path =
         deltaToken === undefined
@@ -563,7 +602,12 @@ export class GraphDriver implements MailProvider {
     const poll = async (): Promise<void> => {
       if (stopped) return
       try {
-        handler({ kind: 'sync-state', accountId: this.accountId, folderId: this.watchFolders[0] ?? 'inbox', state: 'syncing' })
+        handler({
+          kind: 'sync-state',
+          accountId: this.accountId,
+          folderId: this.watchFolders[0] ?? 'inbox',
+          state: 'syncing',
+        })
         for (const folderId of this.watchFolders) {
           const page = await this.transport.get<GraphPage<GraphMessage>>(
             `/me/mailFolders/${encodeURIComponent(folderId)}/messages?$top=25&$orderby=receivedDateTime desc&$select=${MESSAGE_SELECT}`,
@@ -607,7 +651,12 @@ export class GraphDriver implements MailProvider {
         }
         baselineDone = true
         backoffMs = this.pollIntervalMs
-        handler({ kind: 'sync-state', accountId: this.accountId, folderId: this.watchFolders[0] ?? 'inbox', state: 'idle' })
+        handler({
+          kind: 'sync-state',
+          accountId: this.accountId,
+          folderId: this.watchFolders[0] ?? 'inbox',
+          state: 'idle',
+        })
       } catch {
         backoffMs = Math.min(backoffMs * 2, this.maxPollBackoffMs)
         try {

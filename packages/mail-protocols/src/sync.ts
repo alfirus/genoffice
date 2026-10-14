@@ -53,7 +53,10 @@ export interface IntentStep {
  * Next replayable intent: oldest queued first. Intents already acked or
  * failed stay out; callers persist state via MailStore.markIntent.
  */
-export function nextIntent(intents: MailIntent[], attempts: Map<string, number>): IntentStep | undefined {
+export function nextIntent(
+  intents: MailIntent[],
+  attempts: Map<string, number>,
+): IntentStep | undefined {
   const queued = intents.filter((it) => it.state === 'queued')
   if (queued.length === 0) return undefined
   const intent = queued[0]

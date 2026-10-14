@@ -155,7 +155,9 @@ describe('send caps', () => {
         to: ['friend@example.local'],
         subject: 'Big file',
         text: 'see attached',
-        attachments: [{ filename: 'big.bin', mime: 'application/octet-stream', size: 16, path: '' }],
+        attachments: [
+          { filename: 'big.bin', mime: 'application/octet-stream', size: 16, path: '' },
+        ],
       }),
     ).rejects.toMatchObject({ code: 'attachment-too-large' })
     await expect(
@@ -340,7 +342,10 @@ describe('watch: IDLE vs poll', () => {
         subject: 'After outage',
       })
       await waitFor(() =>
-        seen.some((ev) => 'type' in ev && ev.type === 'message-new' && ev.folderId === 'INBOX' && ev.uid === uid),
+        seen.some(
+          (ev) =>
+            'type' in ev && ev.type === 'message-new' && ev.folderId === 'INBOX' && ev.uid === uid,
+        ),
       )
     } finally {
       sub.stop()

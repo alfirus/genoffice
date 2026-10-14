@@ -32,7 +32,12 @@ const small = (over: Partial<SendRequest> = {}): SendRequest => ({
   ...over,
 })
 
-const staged = (size: number) => ({ filename: 'big.bin', mime: 'application/octet-stream', size, path: '/none' })
+const staged = (size: number) => ({
+  filename: 'big.bin',
+  mime: 'application/octet-stream',
+  size,
+  path: '/none',
+})
 
 describe('send-limit verdicts', () => {
   it('passes small sends', () => {
@@ -49,7 +54,10 @@ describe('send-limit verdicts', () => {
   })
 
   it('rejects above the per-message recipient cap', () => {
-    const to = Array.from({ length: GMAIL_MAX_RECIPIENTS_PER_MESSAGE + 1 }, (_, i) => `u${i}@example.com`)
+    const to = Array.from(
+      { length: GMAIL_MAX_RECIPIENTS_PER_MESSAGE + 1 },
+      (_, i) => `u${i}@example.com`,
+    )
     expect(checkSendLimits(small({ to }))).toBe('too-many-recipients')
   })
 })
@@ -59,7 +67,9 @@ describe('driver send enforcement', () => {
     const transport = new FakeGmailTransport()
     const driver = new GmailDriver({ auth: fakeAuth(), transport, fromAddress: 'me@example.com' })
     await driver.connect()
-    await expect(driver.send(small({ attachments: [staged(36 * 1024 * 1024)] }))).rejects.toMatchObject({
+    await expect(
+      driver.send(small({ attachments: [staged(36 * 1024 * 1024)] })),
+    ).rejects.toMatchObject({
       name: 'GmailSendLimitError',
       code: 'too-large',
     })
@@ -71,7 +81,10 @@ describe('driver send enforcement', () => {
     const transport = new FakeGmailTransport()
     const driver = new GmailDriver({ auth: fakeAuth(), transport, fromAddress: 'me@example.com' })
     await driver.connect()
-    const to = Array.from({ length: GMAIL_MAX_RECIPIENTS_PER_MESSAGE + 1 }, (_, i) => `u${i}@example.com`)
+    const to = Array.from(
+      { length: GMAIL_MAX_RECIPIENTS_PER_MESSAGE + 1 },
+      (_, i) => `u${i}@example.com`,
+    )
     const err = await driver.send(small({ to })).catch((e: unknown) => e)
     expect(err).toBeInstanceOf(GmailSendLimitError)
     expect((err as GmailSendLimitError).code).toBe('too-many-recipients')
@@ -101,7 +114,9 @@ describe('driver send enforcement', () => {
       to: ['bob@example.com'],
       subject: 'Files',
       text: 'See attached',
-      attachments: [{ filename: 'a.txt', mime: 'text/plain', bytes: new TextEncoder().encode('data') }],
+      attachments: [
+        { filename: 'a.txt', mime: 'text/plain', bytes: new TextEncoder().encode('data') },
+      ],
     })
     expect(raw).toContain('multipart/mixed')
     expect(raw).toContain('filename="a.txt"')

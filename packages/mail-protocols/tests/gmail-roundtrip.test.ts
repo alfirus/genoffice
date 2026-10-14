@@ -126,9 +126,10 @@ describe('gmail send round-trip', () => {
     })
     expect(result).toEqual({ outboxId: 'outbox-1' })
     expect(transport.sentRaw).toHaveLength(1)
-    const raw = Buffer.from(transport.sentRaw[0].replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString(
-      'utf8',
-    )
+    const raw = Buffer.from(
+      transport.sentRaw[0].replace(/-/g, '+').replace(/_/g, '/'),
+      'base64',
+    ).toString('utf8')
     const back = await parseSentRaw(raw)
     expect(back.subject).toBe('Round trip')
     expect(back.text).toContain('Hello Bob')
@@ -171,7 +172,12 @@ describe('gmail watch', () => {
   it('emits history events and persists the new historyId', async () => {
     const { driver, transport } = driverWithInbox()
     const hooks = memorySyncHooks()
-    hooks.save({ accountId: 'gmail-test', folderId: 'INBOX', historyId: '9000', lastSyncAt: '2026-10-14T09:00:00Z' })
+    hooks.save({
+      accountId: 'gmail-test',
+      folderId: 'INBOX',
+      historyId: '9000',
+      lastSyncAt: '2026-10-14T09:00:00Z',
+    })
     transport.stagedHistory.added = [
       {
         id: 'm1',
@@ -187,7 +193,9 @@ describe('gmail watch', () => {
     await driver.pollOnce()
     sub.stop()
     expect(events.some((e) => 'kind' in e && e.kind === 'messages-added')).toBe(true)
-    expect(events.some((e) => 'kind' in e && e.kind === 'sync-state' && e.state === 'idle')).toBe(true)
+    expect(events.some((e) => 'kind' in e && e.kind === 'sync-state' && e.state === 'idle')).toBe(
+      true,
+    )
     expect(hooks.load('gmail-test')?.historyId).toBe('9000')
     await driver.disconnect()
   })
