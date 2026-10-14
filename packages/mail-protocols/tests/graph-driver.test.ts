@@ -283,8 +283,12 @@ describe('watch', () => {
     const kinds: string[] = []
     const added: string[] = []
     const watcher = driver.watch((ev) => {
-      kinds.push(ev.kind)
-      if (ev.kind === 'messages-added') added.push(...ev.refs.map((r) => r.uid))
+      if ('kind' in ev) {
+        kinds.push(ev.kind)
+        if (ev.kind === 'messages-added') added.push(...ev.refs.map((r) => r.uid))
+      } else if ('type' in ev) {
+        kinds.push(ev.type)
+      }
     })
     await new Promise((resolve) => setTimeout(resolve, 60))
     expect(kinds).toContain('sync-state')
