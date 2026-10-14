@@ -1,0 +1,30 @@
+/* AI stub rail chrome (Lane R owns). Semantic tokens only. */
+.mail-ai {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mail-ai-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.mail-ai-actions button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 6px 4px;
+  cursor: not-allowed;
+}
+
+.mail-ai-note {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
