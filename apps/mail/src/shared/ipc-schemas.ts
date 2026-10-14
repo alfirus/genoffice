@@ -209,7 +209,51 @@ export const mailAttachmentFetchSchema = z
   .object({ attachmentPath: z.string().min(1).max(4096) })
   .strict()
 
+// P4 sync/outbox additions (Y owns): canonical names from the sync spec
+// section 6. Request/response payloads are zod-validated end-to-end;
+// the preload mirrors them with hand-rolled guards and stays zod-free.
+
+export const mailSyncNowSchema = z
+  .object({
+    accountId: accountIdSchema,
+    folderId: z.string().min(1).max(256).optional(),
+  })
+  .strict()
+
+export const outboxRecordSchema = z
+  .object({
+    id: z.string().min(1).max(256),
+    accountId: accountIdSchema,
+    req: sendRequestSchema,
+    state: z.enum(['queued', 'sending', 'failed', 'sent', 'cancelled']),
+    attempts: z.number().int().nonnegative(),
+    nextRetryAt: z.string().max(64).optional(),
+    lastError: z.string().max(1024).optional(),
+    queuedAt: z.string().min(1).max(64),
+    sentAt: z.string().max(64).optional(),
+  })
+  .strict()
+
+export const mailOutboxListSchema = z.object({ accountId: accountIdSchema }).strict()
+
+export const mailOutboxRetrySchema = z
+  .object({ accountId: accountIdSchema, outboxId: z.string().min(1).max(256) })
+  .strict()
+
+export const mailOutboxCancelSchema = z
+  .object({ accountId: accountIdSchema, outboxId: z.string().min(1).max(256) })
+  .strict()
+
+export const mailOfflineStatusSchema = z
+  .object({
+    online: z.boolean(),
+    accountId: accountIdSchema.optional(),
+    detail: z.string().max(1024).optional(),
+  })
+  .strict()
+
 export type MailOpenMessage = z.infer<typeof mailOpenMessageSchema>
 export type MailQueryWire = z.infer<typeof mailQuerySchema>
 export type SendRequestWire = z.infer<typeof sendRequestSchema>
+export type OutboxRecordWire = z.infer<typeof outboxRecordSchema>
 export type MailEventWire = z.infer<typeof mailEventSchema>

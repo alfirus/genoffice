@@ -341,6 +341,30 @@ export class FakeMailApi implements MailApi {
     return noopUnsubscribe()
   }
 
+  // P4 sync/outbox additions (Y owns the contract; fake stubs for dev).
+  async syncNow(): Promise<{ started: boolean }> {
+    return { started: false }
+  }
+
+  async outboxList(): Promise<never[]> {
+    return []
+  }
+
+  async outboxRetry(
+    _accountId: string,
+    outboxId: string,
+  ): Promise<{ outboxId: string; state: string }> {
+    return { outboxId, state: 'queued' }
+  }
+
+  async outboxCancel(): Promise<{ cancelled: boolean }> {
+    return { cancelled: false }
+  }
+
+  onOfflineStatus(): () => void {
+    return noopUnsubscribe()
+  }
+
   async attachmentFetch(): Promise<{ ok: boolean; path?: string }> {
     return { ok: false }
   }

@@ -40,6 +40,12 @@ export const MAIL_CHANNELS = {
   dirtyChanged: 'mail:dirty-changed',
   closeSaveRequest: 'mail:close-save-request',
   closeSaveResult: 'mail:close-save-result',
+  // P4 sync/outbox additions (Y owns)
+  syncNow: 'mail:sync-now',
+  outboxList: 'mail:outbox-list',
+  outboxRetry: 'mail:outbox-retry',
+  outboxCancel: 'mail:outbox-cancel',
+  offlineStatus: 'mail:offline-status',
   getLanguage: 'app:get-language',
   languageChanged: 'app:language-changed',
   getTheme: 'app:get-theme',
@@ -66,6 +72,26 @@ export interface MessagePage {
 export interface OutboxStatus {
   queued: number
   failed: number
+}
+
+/** Outbox entry as the renderer sees it (P4 spec section 5.1). */
+export interface OutboxRecord {
+  id: string
+  accountId: string
+  req: import('@genoffice/mail-protocols').SendRequest
+  state: 'queued' | 'sending' | 'failed' | 'sent' | 'cancelled'
+  attempts: number
+  nextRetryAt?: string
+  lastError?: string
+  queuedAt: string
+  sentAt?: string
+}
+
+/** Offline status event payload (P4 spec section 6). */
+export interface OfflineStatus {
+  online: boolean
+  accountId?: string
+  detail?: string
 }
 
 /** API exposed by the preload to the renderer (window.mailApi). */
@@ -113,6 +139,16 @@ export interface MailApi {
   ): Promise<void>
   /** Push events from main (refs/flags only, never bodies or secrets). */
   onSyncEvent(handler: (event: import('@genoffice/mail-protocols').MailEvent) => void): () => void
+  /** Trigger an incremental sync step; false when one already runs or offline. */
+  syncNow(accountId: string, folderId?: string): Promise<{ started: boolean }>
+  /** Outbox entries newest-first (capped at 200). */
+  outboxList(accountId: string): Promise<OutboxRecord[]>
+  /** Manual retry: reset the budget and re-queue at head. */
+  outboxRetry(accountId: string, outboxId: string): Promise<{ outboxId: string; state: string }>
+  /** Cancel a queued or failed entry; false when already sent/sending. */
+  outboxCancel(accountId: string, outboxId: string): Promise<{ cancelled: boolean }>
+  /** Offline status; replays the current value on subscribe. */
+  onOfflineStatus(handler: (status: OfflineStatus) => void): () => void
   attachmentFetch(attachmentPath: string): Promise<{ ok: boolean; path?: string }>
   onAttachmentProgress(handler: (completed: number, total: number) => void): () => void
   /** Mirror unsaved-changes state to the main process; drives the draft prompt before closing a tab */
