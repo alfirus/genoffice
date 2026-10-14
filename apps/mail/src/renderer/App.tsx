@@ -6,17 +6,23 @@ import { FolderTree, type FolderSelection } from './folders/FolderTree'
 import { MessageList } from './list/MessageList'
 import { SearchBox } from './list/SearchBox'
 import { MessageReader, type ReaderSecurity } from './reader/MessageReader'
-import { AiStub } from './ai/AiStub'
+import { AiPanel, type AiCitationRef } from './ai/AiPanel'
 import { ComposeHost } from './compose/ComposeHost'
+import { OutboxBanner } from './components/OutboxBanner'
+import { OutboxPanel } from './components/OutboxPanel'
+import { OfflineIndicator } from './components/OfflineIndicator'
+import { AccountSyncStatus } from './components/AccountSyncStatus'
 import { applyLocalSearch, FakeMailApi, resolveMailApi } from './devFakes'
 import './layout.css'
 
 /**
  * Mailbox composition (Lane R owns). Folder tree, virtualized list,
- * quarantined reader, search box, AI stub rail, and the <ComposeHost/>
+ * quarantined reader, search box, AI panel rail, and the <ComposeHost/>
  * stub mount (real compose is Lane C's; this file only renders the
  * mount point with the locked props). All reads go through `MailApi`
- * (IPC fakes in P3; the real sync engine is a later phase).
+ * (IPC fakes in P3; the real sync engine is a later phase). The outbox
+ * banner, panel dialog, offline indicator, and per-account sync status
+ * mount here over the same api (P4 shell mount, UI lane owns).
  */
 
 export interface MailAppProps {
@@ -45,6 +51,8 @@ export default function App({ api }: MailAppProps) {
   const [serverExpanded, setServerExpanded] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const [composeDirty, setComposeDirty] = useState(false)
+  const [outboxOpen, setOutboxOpen] = useState(false)
+  const [assistText, setAssistText] = useState<string | null>(null)
 
   const refreshAccounts = useCallback(async () => {
     const next = await resolvedApi.listAccounts()
@@ -247,6 +255,20 @@ export default function App({ api }: MailAppProps) {
       : {}
   const showNoResults = mode === 'search' && !searching && messages.length === 0
 
+  // AI citation click opens the message in the reader (same path as the
+  // list selection); a folder-scoped match wins, a uid match suffices.
+  const openCitation = useCallback(
+    (citation: AiCitationRef) => {
+      const found =
+        messages.find(
+          (item) => item.ref.uid === citation.uid && item.ref.folderId === citation.folderId,
+        ) ?? messages.find((item) => item.ref.uid === citation.uid)
+      if (found) openMessage(found)
+    },
+    [messages, openMessage],
+  )
+  const selectedAccount = accounts.find((account) => account.accountId === selection?.accountId)
+
   return (
     <div className="mail-app">
       <div className="mail-sidebar">
@@ -258,7 +280,20 @@ export default function App({ api }: MailAppProps) {
           onAddAccount={() => void addAccount()}
           onRemoveAccount={(accountId) => void removeAccount(accountId)}
         />
-        <AiStub accountId={selection?.accountId} />
+        <AiPanel
+          accountIds={selection ? [selection.accountId] : []}
+          accounts={accounts}
+          onOpenCitation={openCitation}
+          onInsertAssist={(text) => setAssistText(text)}
+        />
+        <OfflineIndicator api={resolvedApi} accountId={selection?.accountId} />
+        {selection && selectedAccount && (
+          <AccountSyncStatus
+            api={resolvedApi}
+            accountId={selection.accountId}
+            label={selectedAccount.label}
+          />
+        )}
       </div>
       <div className="mail-listpane">
         <SearchBox
@@ -268,9 +303,31 @@ export default function App({ api }: MailAppProps) {
           onSubmit={() => void submitSearch()}
           onClear={() => void clearSearch()}
         />
-        {notice && (
-          <div className="mail-notice" role="status">
-            {notice}
+        <OutboxBanner
+          api={resolvedApi}
+          accountId={selection?.accountId ?? ''}
+          notice={notice}
+          onOpenPanel={() => setOutboxOpen(true)}
+        />
+        {outboxOpen && selection && (
+          <div
+            className="mail-outbox-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t('mail.outbox.title')}
+          >
+            <button
+              type="button"
+              className="mail-outbox-close"
+              onClick={() => setOutboxOpen(false)}
+            >
+              {t('mail.outbox.close')}
+            </button>
+            <OutboxPanel
+              api={resolvedApi}
+              accountId={selection.accountId}
+              folderId={selection.folderId}
+            />
           </div>
         )}
         {showNoResults ? (
@@ -293,6 +350,8 @@ export default function App({ api }: MailAppProps) {
             accountId={selection?.accountId ?? ''}
             threadKey={selectedEnvelope?.ref.threadId}
             onDirtyChange={setComposeDirty}
+            assistText={assistText}
+            onAssistConsumed={() => setAssistText(null)}
             onSend={(req) =>
               void resolvedApi
                 .composeSend(req)
