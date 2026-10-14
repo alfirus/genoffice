@@ -4,6 +4,9 @@ import { stageAttachment } from '@genoffice/mail-protocols'
 import { FakeComposeProvider, registerComposeHandlers } from './compose-handlers'
 import type { ComposeIpcBus } from './compose-handlers'
 import { registerMailReadHandlers } from './mail-read-handlers'
+// P5 AI retrieval (W owns this import + call only): scoped retrieval over
+// the Lane-T store with redaction-backed prompt hygiene.
+import { defaultAiRetrieveDeps, registerAiRetrieveHandlers } from './ai'
 
 /**
  * Shell-hosted mail wiring (merge lane owns this file). The shell main
@@ -21,6 +24,7 @@ export interface MailShellHostDeps {
 
 export function registerMailShellHandlers(bus: ComposeIpcBus, deps: MailShellHostDeps): void {
   registerMailReadHandlers(bus)
+  registerAiRetrieveHandlers(bus, defaultAiRetrieveDeps())
   registerComposeHandlers(bus, {
     provider: new FakeComposeProvider(),
     stage: stageAttachment,

@@ -50,6 +50,9 @@ export const MAIL_CHANNELS = {
   languageChanged: 'app:language-changed',
   getTheme: 'app:get-theme',
   themeChanged: 'app:theme-changed',
+  // P5 AI retrieval (W owns this entry only): the sole new mail:ai-*
+  // channel. Streaming reuses the generic AI_CHANNELS entries above.
+  aiRetrieve: 'mail:ai-retrieve',
 } as const
 
 export type MailChannel = (typeof MAIL_CHANNELS)[keyof typeof MAIL_CHANNELS]
@@ -172,6 +175,63 @@ export interface MailApi {
   aiStream(request: AiStreamRequest): Promise<void>
   aiStreamCancel(requestId: string): Promise<void>
   onAiStream(handler: (chunk: AiStreamChunk) => void): () => void
+  /**
+   * P5 scoped retrieval (W owns). Optional until the UI lane lands the
+   * FakeMailApi stub: the preload bridge implements it today, renderer
+   * fakes follow with the AiPanel lane.
+   */
+  aiRetrieve?(request: AiRetrieveRequest): Promise<AiRetrieveResponse>
+}
+
+/**
+ * P5 AI retrieval wire shapes (W owns this block only). The picker-selected
+ * account set travels with every call; main rejects unknown accounts and
+ * opens only per-account stores, while the renderer discards results whose
+ * echoed scope no longer matches the live picker.
+ */
+export interface AiScope {
+  /** Picker-selected account ids; non-empty, max 8. */
+  accountIds: string[]
+}
+
+export type AiRetrieveOp = 'triage-headers' | 'fetch-bodies' | 'cite-resolve'
+
+export interface AiRetrieveRequest {
+  scope: AiScope
+  op: AiRetrieveOp
+  /** triage-headers: FTS query over headers + snippet. */
+  query?: string
+  folderId?: string
+  /** Default 50, hard cap 200. */
+  limit?: number
+  /** fetch-bodies / cite-resolve: explicit user-cited set, max 50. */
+  refs?: import('@genoffice/mail-protocols').MailMessageRef[]
+}
+
+export interface AiBodyEntry {
+  ref: import('@genoffice/mail-protocols').MailMessageRef
+  /** Scope account that held this ref (refs carry no account id). */
+  accountId: string
+  /** Cited body text, redacted for prompts. */
+  text: string
+}
+
+export interface AiCitation {
+  uid: string
+  folderId: string
+  msgIdHeader?: string
+  /** Scope account that held this ref (refs carry no account id). */
+  accountId: string
+}
+
+export interface AiRetrieveResponse {
+  /** Echo of the request scope; the renderer discards on mismatch. */
+  scope: AiScope
+  /** Headers + snippet only; bodies never appear here. */
+  envelopes: import('@genoffice/mail-protocols').MailEnvelope[]
+  /** fetch-bodies only, cited set only, redacted for prompts. */
+  bodies?: AiBodyEntry[]
+  citations: AiCitation[]
 }
 
 /** AI channels are app-wide shared ipcMain handlers (shell registers via docs-main registerAiIpc); pass-through only */
