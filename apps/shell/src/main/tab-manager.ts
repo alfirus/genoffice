@@ -18,7 +18,12 @@ import {
   markdownIsDirty,
   requestMarkdownClose,
 } from '../../../markdown/src/main/markdown-main'
-import { createMailView, mailIsDirty, requestMailClose } from '../../../mail/src/main/mail-main'
+import {
+  createMailView,
+  mailIsDirty,
+  mailRefOf,
+  requestMailClose,
+} from '../../../mail/src/main/mail-main'
 import {
   createHtmlPresentView,
   createHtmlView,
@@ -395,6 +400,20 @@ export class TabManager {
     })
     this.activateTab(id)
     return id
+  }
+
+  /**
+   * `mail:open-message` route: focus the live tab already showing this
+   * mailRef, else open one. Identity is the renderer's mailRef (mail tabs
+   * carry no filePath) — the initial blank tab has none, so it never matches.
+   */
+  openOrFocusMailTab(mailRef: string): string {
+    const existing = this.mailTabs().find((tab) => mailRefOf(tab.webContents.id) === mailRef)
+    if (existing) {
+      this.activateTab(existing.id)
+      return existing.id
+    }
+    return this.openMailTab(mailRef)
   }
 
   /** Present → New tab: a chrome-free html tab showing the owner tab's live preview */
