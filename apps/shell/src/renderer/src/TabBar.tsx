@@ -155,7 +155,8 @@ function MailIcon() {
   )
 }
 
-const KIND_ICON: Record<TabSummary['kind'], ReactElement> = {
+/** tab-strip icon per tab kind (exported for unit coverage; the strip itself uses TabBar) */
+export const KIND_ICON: Record<TabSummary['kind'], ReactElement> = {
   home: <HomeIcon />,
   docs: <DocIcon />,
   sheets: <SheetIcon />,

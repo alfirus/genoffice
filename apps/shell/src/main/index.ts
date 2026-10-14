@@ -271,7 +271,7 @@ import {
   setHtmlPresentHooks,
   setHtmlProvisionalTitleHook,
 } from '../../../html/src/main/html-main'
-import { configureMailRuntime, mailRefOf } from '../../../mail/src/main/mail-main'
+import { configureMailRuntime } from '../../../mail/src/main/mail-main'
 import { registerMailShellHandlers } from '../../../mail/src/main/mail-shell-host'
 import { MAIL_CHANNELS } from '../../../mail/src/shared/ipc'
 import { mailOpenMessageSchema } from '../../../mail/src/shared/ipc-schemas'
@@ -4856,6 +4856,14 @@ function registerHomeIpc(): void {
     void newPdfTab()
   })
 
+  // Mail tabs hold no files, so unlike the editors above there is no
+  // pending-dir to remember — the opener is just the tab itself. This is the
+  // automation-reachable path (Playwright: `aiOffice.newMail()`); the native
+  // "+"/File menus call newMailTab() directly and take no synthetic input.
+  ipcMain.handle(HOME_CHANNELS.newMail, () => {
+    newMailTab()
+  })
+
   ipcMain.handle(HOME_CHANNELS.removeRecent, (_event, paths: unknown) => {
     const list = stringPaths(paths)
     removeRecentFiles(list)
@@ -5630,13 +5638,7 @@ function registerTabsIpc(): void {
   ipcMain.handle(MAIL_CHANNELS.openMessage, (_event, payload: unknown) => {
     const parsed = mailOpenMessageSchema.safeParse(payload)
     if (!parsed.success) throw new Error('mail: bad open-message payload')
-    const { mailRef } = parsed.data
-    const existing = tabManager?.mailTabs().find((tab) => mailRefOf(tab.webContents.id) === mailRef)
-    if (existing) {
-      tabManager?.activateTab(existing.id)
-      return existing.id
-    }
-    return tabManager?.openMailTab(mailRef) ?? null
+    return tabManager?.openOrFocusMailTab(parsed.data.mailRef) ?? null
   })
   ipcMain.handle(TABS_CHANNELS.reorder, (_event, id: string, toIndex: number) => {
     if (typeof id === 'string' && Number.isInteger(toIndex)) tabManager?.reorderTab(id, toIndex)
