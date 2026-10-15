@@ -74,7 +74,7 @@ describe('aiOffice.newMail() preload bridge', () => {
 
 describe('mail tab-strip icon', () => {
   it('covers every tab kind including mail', () => {
-    const kinds: TabKind[] = ['home', 'docs', 'sheets', 'slides', 'pdf', 'markdown', 'html', 'mail']
+    const kinds: TabKind[] = ['home', 'docs', 'sheets', 'slides', 'pdf', 'markdown', 'html', 'help', 'mail']
     expect(Object.keys(KIND_ICON).sort()).toEqual([...kinds].sort())
   })
 
