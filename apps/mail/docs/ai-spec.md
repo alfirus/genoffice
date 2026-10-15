@@ -8,8 +8,9 @@ T `8f290511` + Y `a5a446c0` + O `4c466a4b` + BUG-1 fix `c2feb03f`),
 branch `feat/mail-p5-ai-spec`, local-only (no upstream PR per standing
 instruction; fakes/synthetic mail only, no real creds).
 Normative inputs: plan `genoffice-mail-plan.md` section 3 (AI integration)
-+ roadmap P4 acceptance; PII rules from `genoffice-mail-security-spec.md`
-section 4 (normative — violation fails sec review).
+
+- roadmap P4 acceptance; PII rules from `genoffice-mail-security-spec.md`
+  section 4 (normative — violation fails sec review).
 
 Base-tree note: on first touch the `t_41aadd5d` checkout showed a transient
 `M apps/mail/src/main/store/store.ts` plus mass-deletion flapping; the
@@ -54,8 +55,9 @@ Markdown precedent (mirror, do not fork): `apps/markdown/src/renderer/ai/`
 `createElectronTransport` at `:270-271`); `transport.ts:6`
 `createElectronTransport(getSettings)` over `window.markdownApi`
 (`onAiStream`/`aiStream`/`aiStreamCancel`); `tools.ts:114` `AGENT_TOOLS`
-+ `tools.ts:437` `executeTool`; `markdown-skill.ts:69`
-`createMarkdownSkill`, `search-skill.ts:9` `createSearchSkill`.
+
+- `tools.ts:437` `executeTool`; `markdown-skill.ts:69`
+  `createMarkdownSkill`, `search-skill.ts:9` `createSearchSkill`.
 
 Mail starts from `apps/mail/src/renderer/ai/` (currently `AiStub.tsx` +
 `ai.css` stub only). New files (K lane, section 10):
@@ -95,14 +97,14 @@ reject any final text containing a factual claim without a
 
 Verbatim from security spec section 4:
 
-| Context | MAY see | MUST NEVER see |
-|---|---|---|
-| Triage (default) | Headers (from/to/subject/date), folder, snippet, labels/flags | Bodies, attachments, other accounts' mail |
-| Summarize / catch-up | Selected thread/folder bodies, on explicit user action | Mail outside the selected account scope |
-| Compose-assist | Draft text + cited thread context the user opened | Address-book harvesting beyond recipients user typed |
-| Ask-mail | Retrieved messages WITH per-claim message-id citations | Cross-account joins; un-cited claims presented as fact |
-| Logs / telemetry / crash | Allowlisted fields only (accountId hash, op outcome, latency) | Bodies, snippets, subjects, addresses, tokens, blobs |
-| Skill traces / eval fixtures | Synthetic mail only | Real user mail in checked-in fixtures |
+| Context                      | MAY see                                                       | MUST NEVER see                                         |
+| ---------------------------- | ------------------------------------------------------------- | ------------------------------------------------------ |
+| Triage (default)             | Headers (from/to/subject/date), folder, snippet, labels/flags | Bodies, attachments, other accounts' mail              |
+| Summarize / catch-up         | Selected thread/folder bodies, on explicit user action        | Mail outside the selected account scope                |
+| Compose-assist               | Draft text + cited thread context the user opened             | Address-book harvesting beyond recipients user typed   |
+| Ask-mail                     | Retrieved messages WITH per-claim message-id citations        | Cross-account joins; un-cited claims presented as fact |
+| Logs / telemetry / crash     | Allowlisted fields only (accountId hash, op outcome, latency) | Bodies, snippets, subjects, addresses, tokens, blobs   |
+| Skill traces / eval fixtures | Synthetic mail only                                           | Real user mail in checked-in fixtures                  |
 
 Enforcement points: `MailEnvelope` is headers+snippet by construction —
 `toEnvelope` (`apps/mail/src/main/store/store.ts`, `toEnvelope` fn)
@@ -119,7 +121,9 @@ The picker-selected account set travels with EVERY AI call and is
 re-checked where results render:
 
 ```ts
-interface AiScope { accountIds: string[] }  // picker-selected, non-empty, max 8
+interface AiScope {
+  accountIds: string[]
+} // picker-selected, non-empty, max 8
 ```
 
 - Renderer: `AiPanel` holds the scope from the account picker; every
@@ -147,19 +151,20 @@ FTS; bodies lazily.
 
 ```ts
 // renderer -> main (W lane implements; K lane consumes via mail-tools.ts)
-type AiRetrieveOp = 'triage-headers' | 'fetch-bodies' | 'cite-resolve';
+type AiRetrieveOp = 'triage-headers' | 'fetch-bodies' | 'cite-resolve'
 interface AiRetrieveRequest {
-  scope: AiScope;
-  op: AiRetrieveOp;
-  query?: string;                 // triage-headers: FTS query, headers+snippet ranked
-  folderId?: string; limit?: number;  // default 50 (FTS_DEFAULT_LIMIT, store.ts:53)
-  refs?: MailMessageRef[];        // fetch-bodies / cite-resolve: explicit user-cited set
+  scope: AiScope
+  op: AiRetrieveOp
+  query?: string // triage-headers: FTS query, headers+snippet ranked
+  folderId?: string
+  limit?: number // default 50 (FTS_DEFAULT_LIMIT, store.ts:53)
+  refs?: MailMessageRef[] // fetch-bodies / cite-resolve: explicit user-cited set
 }
 interface AiRetrieveResponse {
-  scope: AiScope;                 // echo — renderer discards on mismatch
-  envelopes: MailEnvelope[];      // headers+snippet ONLY (toEnvelope shape); bodies NEVER here
-  bodies?: { ref: MailMessageRef; text: string }[];  // fetch-bodies only, cited set only
-  citations: { uid: string; folderId: string; msgIdHeader?: string }[];
+  scope: AiScope // echo — renderer discards on mismatch
+  envelopes: MailEnvelope[] // headers+snippet ONLY (toEnvelope shape); bodies NEVER here
+  bodies?: { ref: MailMessageRef; text: string }[] // fetch-bodies only, cited set only
+  citations: { uid: string; folderId: string; msgIdHeader?: string }[]
 }
 ```
 
@@ -257,14 +262,14 @@ W lane adds (same file, same owner Y→W handoff documented in section 10):
   `AiPanel.tsx` wiring (`AgentLoop` `:359` + `transport` `:360` +
   `composeSkills([...])` `:361`): `createMailTransport` (same shape as
   markdown `transport.ts:6`, over `window.mailApi.onAiStream/aiStream/
-  aiStreamCancel`), `composeSkills('mail-ai', intro, [triage,
-  summarize, composeAssist, mailSearch])`, `AgentLoop<MailSnapshot>`.
+aiStreamCancel`), `composeSkills('mail-ai', intro, [triage,
+summarize, composeAssist, mailSearch])`, `AgentLoop<MailSnapshot>`.
 - DELETE `AiStub.tsx` (stub rail served its purpose; its 4 disabled
   buttons + `data-account` scoping note are superseded by the panel).
   Mount swap in `App.tsx`: replace `<AiStub accountId={...} />`
   (`App.tsx:261`, sidebar under `FolderTree`) with
   `<AiPanel scope={selection accountIds} onInsertAssist={...}
-  onOpenCitation={openMessage} />`.
+onOpenCitation={openMessage} />`.
 - Citation-click opens the message in the reader: citations call
   `openMessage(envelope)` (`App.tsx:137-150`: `setSelectedUid` + mark
   seen), the same callback `MessageList` uses via `onSelect`
@@ -346,7 +351,7 @@ completion metadata. No main/ipc/preload changes in the port
   render discard test. Any leak = lane FAIL.
 - Redaction unit tests (W): mail fixtures incl. multi-hop Received,
   bearer tokens, key blocks, IPs; assert `containsPii(redacted) ===
-  false` and header blocks gone from prompt strings.
+false` and header blocks gone from prompt strings.
 - Citations-open-messages (UI): cited claim click → `openMessage` →
   reader shows cited uid (`App.tsx:137` path).
 - P4 regression: full mail suite (existing 204+ tests incl.
@@ -374,7 +379,7 @@ completion metadata. No main/ipc/preload changes in the port
 - D6 Naming: plan roadmap calls AI "P4-AI" and hardening "P5"; this
   execution runs AI as P5-SPEC with P4 = sync/offline (done). Phase
   acceptance for THIS card: stubbed-provider AI e2e + redaction tests
-  + no-leak tests green (plan P4-AI acceptance, same bar, new number).
+  - no-leak tests green (plan P4-AI acceptance, same bar, new number).
 - D7 Streaming reuses generic `ai:stream*` channels (section 6); there
   are NO `mail:ai-stream*` channels. The sole new channel is
   `mail:ai-retrieve`.

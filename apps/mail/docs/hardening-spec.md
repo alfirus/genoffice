@@ -42,7 +42,7 @@ caller in tree); H2 creates it.
 - C-3 Stored shapes: OAuth refresh tokens (Gmail, Graph) + IMAP/SMTP
   passwords/app-passwords as ONE opaque encrypted blob per account:
   `{ accountId, provider, address, scopesGranted, blob, backend,
-  updatedAt }`. Plaintext metadata + opaque blob; blob bytes opaque to
+updatedAt }`. Plaintext metadata + opaque blob; blob bytes opaque to
   the rest of the app.
 - C-4 Access tokens memory-only: never persisted (no SQLite column, no
   `project-store` JSON, no log, no crash report, no IPC payload to
@@ -80,6 +80,7 @@ caller in tree); H2 creates it.
   FAIL the suite.
 
 ### 1.2 H2 verdict gates the hardening merge
+
 Alya's audit report + fixes land with tests green; verdict (GO /
 CONDITIONAL / NO-GO) is recorded on the H2 card. A NO-GO blocks the
 hardening merge until re-audit passes.
@@ -91,16 +92,17 @@ hardening merge until re-audit passes.
 Normative matrix (verbatim from security spec section 4; violation
 fails sec review):
 
-| Context | MAY see | MUST NEVER see |
-|---|---|---|
-| Triage (default) | Headers (from/to/subject/date), folder, snippet, labels/flags | Bodies, attachments, other accounts' mail |
-| Summarize / catch-up | Selected thread/folder bodies, on explicit user action | Mail outside the selected account scope |
-| Compose-assist | Draft text + cited thread context the user opened | Address-book harvesting beyond recipients user typed |
-| Ask-mail | Retrieved messages WITH per-claim message-id citations | Cross-account joins; un-cited claims presented as fact |
-| Logs / telemetry / crash | Allowlisted fields only (accountId hash, op outcome, latency) | Bodies, snippets, subjects, addresses, tokens, blobs |
-| Skill traces / eval fixtures | Synthetic mail only | Real user mail in checked-in fixtures |
+| Context                      | MAY see                                                       | MUST NEVER see                                         |
+| ---------------------------- | ------------------------------------------------------------- | ------------------------------------------------------ |
+| Triage (default)             | Headers (from/to/subject/date), folder, snippet, labels/flags | Bodies, attachments, other accounts' mail              |
+| Summarize / catch-up         | Selected thread/folder bodies, on explicit user action        | Mail outside the selected account scope                |
+| Compose-assist               | Draft text + cited thread context the user opened             | Address-book harvesting beyond recipients user typed   |
+| Ask-mail                     | Retrieved messages WITH per-claim message-id citations        | Cross-account joins; un-cited claims presented as fact |
+| Logs / telemetry / crash     | Allowlisted fields only (accountId hash, op outcome, latency) | Bodies, snippets, subjects, addresses, tokens, blobs   |
+| Skill traces / eval fixtures | Synthetic mail only                                           | Real user mail in checked-in fixtures                  |
 
 ### 2.1 Redaction coverage checklist (implemented in W lane at HEAD:
+
 `apps/mail/src/main/sync/redact.ts` — `redactForPrompt`,
 `stripTransportHeaders`, `sanitizeError`, `containsPii`,
 `PROMPT_TEXT_CAP_CHARS = 200_000`)
@@ -192,10 +194,10 @@ network/compose bytes --> staged temp (stageDir, content-addressed)
   them. Blocked verdicts surface as a non-rendered placeholder (no
   preview, no OS-open without confirm).
 - Q-7 Progress IPC + UI surfacing (Elizabeth-owned compose-attachment
-  + quarantine main code + surfacing): staged → scanning → stored /
-  blocked states visible per attachment with i18n strings (`mail.*`
-  keys, zh first, all locales per the single-file `strings.ts`
-  pattern); theme-token CSS only.
+  - quarantine main code + surfacing): staged → scanning → stored /
+    blocked states visible per attachment with i18n strings (`mail.*`
+    keys, zh first, all locales per the single-file `strings.ts`
+    pattern); theme-token CSS only.
 - Q-8 Synthetic attachments only in tests (EICAR-style vectors +
   hostile names/paths, never real malware); MUST include traversal
   rejection, exec-never-inline, and cap tests.
@@ -275,42 +277,43 @@ API drivers stay behind the verification landing.
 ### 5.1 Google (Gmail API, restricted scope `gmail.modify`)
 
 - [ ] V-1 Brand verification pack: verified-domain homepage URL,
-  matching privacy-policy URL disclosing mail-data
-  access/use/storage/sharing + data-retention + deletion path,
-  in-product notice text (prepared draft in docs lane).
+      matching privacy-policy URL disclosing mail-data
+      access/use/storage/sharing + data-retention + deletion path,
+      in-product notice text (prepared draft in docs lane).
 - [ ] V-2 OAuth consent screen: app name, logo, homepage + privacy
-  links, published status plan (`External` user-type while unverified;
-  test-user list <= 100 users cap acknowledged).
+      links, published status plan (`External` user-type while unverified;
+      test-user list <= 100 users cap acknowledged).
 - [ ] V-3 Restricted-scope justification narrative for `gmail.modify`
-  (why not read-only: send + label/flag write is core function;
-  why not full `mail`: least privilege).
+      (why not read-only: send + label/flag write is core function;
+      why not full `mail`: least privilege).
 - [ ] V-4 Limited-use compliance statement (no ads, no sale, no
-  human reading except consented support/security, no training use —
-  matches BYOK/proxy-only provider rule).
+      human reading except consented support/security, no training use —
+      matches BYOK/proxy-only provider rule).
 - [ ] V-5 CASA security assessment tier confirmed + assessor engaged
-  (restricted scopes require third-party assessment + ANNUAL
-  re-verification — calendar the renewal).
+      (restricted scopes require third-party assessment + ANNUAL
+      re-verification — calendar the renewal).
 - [ ] V-6 Domain ownership verified in Search Console; authorized
-  domains + redirect URIs registered exactly as coded.
+      domains + redirect URIs registered exactly as coded.
 
 ### 5.2 Microsoft (Graph delegated `Mail.ReadWrite` + `offline_access` + `User.Read`)
 
 - [ ] V-7 Entra multitenant app registration (delegated ONLY — no
-  `*.ReadWrite.All` application permissions); exact redirect URIs
-  (`http://localhost` loopback and/or `ms-appx-web`) matching code.
+      `*.ReadWrite.All` application permissions); exact redirect URIs
+      (`http://localhost` loopback and/or `ms-appx-web`) matching code.
 - [ ] V-8 Publisher verification: MPN ID + verified domain (removes
-  "unverified publisher" consent warning).
+      "unverified publisher" consent warning).
 - [ ] V-9 Admin-consent UX path designed as NORMAL (tenant admins may
-  still require approval — handled, not an error state).
+      still require approval — handled, not an error state).
 - [ ] V-10 Refresh-token story documented (`offline_access` yields
-  refresh; rotation/wipe rules per section 1.1 C-7).
+      refresh; rotation/wipe rules per section 1.1 C-7).
 
 ### 5.3 Shared
+
 - [ ] V-11 Fork/rebrand rule: OAuth registrations belong to the
-  DISTRIBUTION (fork ships its own client IDs; upstream PRs keep
-  GenOffice marks). Client IDs are public identifiers, not secrets.
+      DISTRIBUTION (fork ships its own client IDs; upstream PRs keep
+      GenOffice marks). Client IDs are public identifiers, not secrets.
 - [ ] V-12 Verification status tracked per release; P6/release builds
-  require landing or documented waiver.
+      require landing or documented waiver.
 
 ---
 
