@@ -131,13 +131,62 @@ function refKey(ref: Pick<MailMessageRef, 'uid' | 'folderId'>): string {
   return `${ref.folderId}/${ref.uid}`
 }
 
+/**
+ * Bracket tokens that are NOT message citations: redaction placeholders the
+ * W lane emits inside bodies (`[address]`, `[secret]`, ...) plus the
+ * instructional `[uid]` placeholder from tool copy. Anything else shaped
+ * like `[token]` alongside factual claims is treated as an unverified
+ * citation (H3 prompt-injection fixture: citation forgery).
+ */
+const NON_CITATION_TOKENS = new Set([
+  'uid',
+  'address',
+  'secret',
+  'ip',
+  'blob',
+  'redacted',
+  'redacted-key',
+  'truncated',
+  'message-id',
+])
+
+const UID_LIKE_TOKEN_RE = /\[([^\][\s()]+)\]/g
+const UID_LIKE_SHAPE_RE = /^[A-Za-z0-9._:@-]{1,64}$/
+
+/** Bracketed uid-like tokens in text that name no retrieved message. */
+function unknownCitationTokens(stripped: string, cited: ReadonlySet<string>): string[] {
+  const unknown: string[] = []
+  UID_LIKE_TOKEN_RE.lastIndex = 0
+  let match: RegExpExecArray | null
+  while ((match = UID_LIKE_TOKEN_RE.exec(stripped)) !== null) {
+    const token = match[1]
+    if (cited.has(token)) continue
+    if (NON_CITATION_TOKENS.has(token.toLowerCase())) continue
+    if (!UID_LIKE_SHAPE_RE.test(token)) continue
+    if (!unknown.includes(token)) unknown.push(token)
+  }
+  return unknown
+}
+
+function claimLinesOf(stripped: string): string[] {
+  return stripped
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(
+      (line) =>
+        /^(?:[-*•>]|\d+[.)])\s+\S/.test(line) || (line.length > 200 && /[.!?。]$/.test(line)),
+    )
+}
+
 export interface CitationGuard {
   /** Record uids the model may cite (populated on each successful retrieval). */
   noteCited(uid: string): void
   /**
    * verifyResponse for ask-mail/summarize: reject final text that states
    * retrieved facts without a recorded `[uid]` citation, forcing one
-   * corrective turn. Returns the correction or null to accept.
+   * corrective turn. Also rejects uid-like bracket tokens that name no
+   * retrieved message (citation forgery). Returns the correction or null
+   * to accept.
    */
   verifyCited(finalText: string, executed: readonly ExecutedToolCall[]): string | null
 }
@@ -160,14 +209,24 @@ export function createCitationGuard(toolNames: readonly string[]): CitationGuard
         .replace(/`[^`]*`/g, ' ')
         .replace(/\[[^\]]*\]\([^)]*\)/g, ' ')
       const hasCitation = [...cited].some((uid) => stripped.includes(citeToken(uid)))
-      if (hasCitation) return null
-      const claimLines = stripped
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(
-          (line) =>
-            /^(?:[-*•>]|\d+[.)])\s+\S/.test(line) || (line.length > 200 && /[.!?。]$/.test(line)),
+      const claimLines = claimLinesOf(stripped)
+      if (hasCitation) {
+        // Forgery check: claims accompanied by uid-like bracket tokens that
+        // name no retrieved message (injected `[evil-999]`, cross-account
+        // `[b-m1]`) are rejected even when a valid citation is also present.
+        const unknown = unknownCitationTokens(stripped, cited)
+        if (unknown.length === 0) return null
+        if (claimLines.length === 0 && stripped.trim().length <= 200) return null
+        return (
+          'The reply cites messages outside the retrieved set ' +
+          `(${unknown
+            .slice(0, 8)
+            .map((token) => `[${token}]`)
+            .join(' ')}). ` +
+          'Restate every factual claim with its per-claim message-id citation ' +
+          `(${[...cited].slice(0, 8).map(citeToken).join(' ')}) and keep uncited text to chatter only.`
         )
+      }
       if (claimLines.length === 0 && stripped.trim().length <= 200) return null
       return (
         'The reply states mail facts without a message citation. ' +
