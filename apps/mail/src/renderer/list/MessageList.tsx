@@ -2,12 +2,20 @@ import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { MailEnvelope } from '@genoffice/mail-protocols'
 import { useI18n } from '../i18n/locale'
+import {
+  LIST_OVERSCAN,
+  LIST_ROW_HEIGHT,
+  LIST_VIEWPORT_HEIGHT,
+  computeListWindow,
+} from './list-perf'
 import './list.css'
 
 /**
- * Virtualized message list (Lane R owns). Rows have a fixed height so
- * only the visible window (plus overscan) renders; spacers preserve the
- * scrollbar. Arrow keys move the selection; Enter opens via onSelect.
+ * Virtualized message list (Lane R owns; H6 perf budgets P-1..P-3).
+ * Rows have a fixed height so only the visible window (plus overscan)
+ * renders; spacers preserve the scrollbar. Window arithmetic lives in
+ * `computeListWindow` (pure O(1): the scroll handler never traverses
+ * the list). Arrow keys move the selection; Enter opens via onSelect.
  */
 
 export interface MessageListProps {
@@ -18,9 +26,13 @@ export interface MessageListProps {
   onSelect(envelope: MailEnvelope): void
   onLoadMore(): void
   rowHeight?: number
+  /**
+   * H6 test probe for the P-2 render-counter pin: called once per row
+   * render with the row uid. Never set in production; off-window rows
+   * must never trigger it.
+   */
+  onRenderRow?(uid: string): void
 }
-
-const OVERSCAN = 4
 
 export function MessageList({
   messages,
@@ -29,12 +41,13 @@ export function MessageList({
   hasMore,
   onSelect,
   onLoadMore,
-  rowHeight = 76,
+  rowHeight = LIST_ROW_HEIGHT,
+  onRenderRow,
 }: MessageListProps) {
   const { t } = useI18n()
   const scrollRef = useRef<HTMLDivElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
-  const [viewportHeight, setViewportHeight] = useState(480)
+  const [viewportHeight, setViewportHeight] = useState(LIST_VIEWPORT_HEIGHT)
 
   useEffect(() => {
     const node = scrollRef.current
@@ -49,12 +62,16 @@ export function MessageList({
     return () => observer.disconnect()
   }, [])
 
-  const totalHeight = messages.length * rowHeight
-  const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight) - OVERSCAN)
-  const visibleCount = Math.ceil(viewportHeight / rowHeight) + OVERSCAN * 2
-  const windowed = messages.slice(startIndex, startIndex + visibleCount)
-  const topSpacer = startIndex * rowHeight
-  const bottomSpacer = Math.max(0, totalHeight - topSpacer - windowed.length * rowHeight)
+  const window = computeListWindow({
+    total: messages.length,
+    scrollTop,
+    viewportHeight,
+    rowHeight,
+    overscan: LIST_OVERSCAN,
+  })
+  const windowed = messages.slice(window.startIndex, window.endIndex)
+  const topSpacer = window.topSpacer
+  const bottomSpacer = window.bottomSpacer
 
   const moveSelection = (delta: number): void => {
     if (messages.length === 0) return
@@ -96,6 +113,7 @@ export function MessageList({
         {topSpacer > 0 && <div style={{ height: topSpacer }} aria-hidden="true" />}
         {windowed.map((envelope) => {
           const active = envelope.ref.uid === selectedUid
+          if (onRenderRow) onRenderRow(envelope.ref.uid)
           return (
             <button
               key={`${envelope.ref.folderId}/${envelope.ref.uid}`}
