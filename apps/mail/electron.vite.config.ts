@@ -2,12 +2,19 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 
 export default defineConfig({
-  // @genoffice/i18n, @genoffice/electron-utils and @genoffice/mail-protocols
-  // ship as TS source — must be bundled (same policy as apps/markdown).
+  // @genoffice/i18n, @genoffice/electron-utils, @genoffice/mail-protocols
+  // and @genoffice/file-parse ship as TS source — must be bundled (same
+  // policy as apps/markdown). file-parse is the H5 quarantine preview
+  // extractor (Q-3); no second parser exists in the mail app.
   main: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@genoffice/i18n', '@genoffice/electron-utils', '@genoffice/mail-protocols'],
+        exclude: [
+          '@genoffice/i18n',
+          '@genoffice/electron-utils',
+          '@genoffice/mail-protocols',
+          '@genoffice/file-parse',
+        ],
       }),
     ],
   },
