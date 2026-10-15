@@ -475,7 +475,7 @@ export class TabManager {
     const id = `t${this.nextId++}`
     this.shellWindow.contentView.addChildView(view)
     view.setVisible(false)
-    this.trackHtmlFullScreen(id, view)
+    this.trackHtmlFullScreen(view)
     this.tabs.push({
       id,
       kind: 'mail',

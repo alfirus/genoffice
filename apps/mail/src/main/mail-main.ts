@@ -60,6 +60,7 @@ const tDlg = createI18n({
     btnDontSave: '不儲存',
     btnCancel: '取消',
   },
+  vi: enClose,
 })
 type DlgKey =
   'closeUnsavedMsg' | 'closeUnsavedDetail' | 'btnSaveDraft' | 'btnDontSave' | 'btnCancel'

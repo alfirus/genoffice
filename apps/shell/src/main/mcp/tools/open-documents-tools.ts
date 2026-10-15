@@ -113,6 +113,13 @@ export function resolveOpenDocumentOfFamily(
 ): OpenDocumentTab {
   const doc = resolveOpenDocument(documents, target)
   if (!doc) throw noMatch(target, documents)
+  // Mail tabs carry a renderer-side mailRef, never a file, so they have no
+  // format family and stay out of FAMILY_BY_KIND (see the map comment above).
+  if (doc.kind === 'mail') {
+    throw new Error(
+      `"${doc.title}" is a mail tab, which this tool cannot edit; mail is read through the Mail app`,
+    )
+  }
   const actual = FAMILY_BY_KIND[doc.kind]
   if (actual !== family) {
     throw new Error(

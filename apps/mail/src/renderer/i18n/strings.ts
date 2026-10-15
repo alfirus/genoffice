@@ -1459,4 +1459,7 @@ export const strings = {
   he,
   hi,
   'zh-TW': zhTW,
+  // vi locale is new upstream (added after the mail shards); English fallback
+  // until a Vietnamese translation lands (same policy as main-process enClose).
+  vi: en,
 }
