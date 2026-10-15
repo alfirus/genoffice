@@ -28,6 +28,9 @@ export const mailMessageRefSchema = z
     folderId: z.string().min(1).max(256),
     msgIdHeader: z.string().max(1024).optional(),
     threadId: z.string().min(1).max(256),
+    // H4 exact-match hint (D-H1-C3): the citation's scope account, round-tripped
+    // by the renderer. Optional so every existing ref payload still parses.
+    accountId: accountIdSchema.optional(),
   })
   .strict()
 

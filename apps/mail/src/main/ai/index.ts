@@ -23,8 +23,17 @@ export {
   AI_RETRIEVE_MAX_REFS,
   aiRetrieve,
 } from './retrieve'
+export {
+  AI_RETRIEVE_RATE_BURST,
+  AI_RETRIEVE_RATE_SUSTAINED_PER_MINUTE,
+  createAiRetrieveRateLimiter,
+  resetSharedAiRetrieveRateLimiter,
+  sharedAiRetrieveRateLimiter,
+} from './rate-limit'
+export type { AiRateLimiter } from './rate-limit'
 export { defaultAiRetrieveDeps } from './stores'
 export type { AiIpcBus } from './ipc'
 export { registerAiRetrieveHandlers, resetAiRetrieveHandlers } from './ipc'
 export type { StubSeedAccount, StubSeedMessage } from './stub'
 export { collectStubStream, createStubAiDeps, stubRef, twoAccountStubSeeds } from './stub'
+export { sameUidTwoAccountSeeds, stubRefHinted } from './stub'
