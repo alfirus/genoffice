@@ -4,6 +4,8 @@ import { ipcMain, shell } from 'electron'
 import { stageAttachment } from '@genoffice/mail-protocols'
 import { FakeComposeProvider, registerComposeHandlers } from './compose-handlers'
 import type { ComposeIpcBus } from './compose-handlers'
+// H5 quarantine (additive): staged-temp --> scan --> store IPC handlers.
+import { registerQuarantineHandlers } from './quarantine-handlers'
 import { startMailStandalone } from './mail-main'
 
 // Standalone mail entry (Lane S owns the original lines; Lane C adds the
@@ -23,6 +25,9 @@ registerComposeHandlers(electronBus, {
   stage: stageAttachment,
   stageDir: join(tmpdir(), 'genoffice-mail-compose'),
   openExternal: (url) => shell.openExternal(url),
+})
+registerQuarantineHandlers(electronBus, {
+  openPath: (path) => shell.openPath(path),
 })
 
 startMailStandalone()

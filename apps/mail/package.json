@@ -15,6 +15,7 @@
   },
   "devDependencies": {
     "@genoffice/electron-utils": "*",
+    "@genoffice/file-parse": "*",
     "@genoffice/i18n": "*",
     "@genoffice/mail-protocols": "*",
     "@genoffice/project-store": "*",

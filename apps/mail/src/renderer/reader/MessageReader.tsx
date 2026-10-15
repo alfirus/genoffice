@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { MouseEvent } from 'react'
+import type { MouseEvent, ReactElement } from 'react'
 import type { MailBody, MailEnvelope } from '@genoffice/mail-protocols'
 import type { MailApi } from '../../shared/ipc'
 import { useI18n } from '../i18n/locale'
 import { extractDomain, lookalikeDomain, replyToMismatch, sanitizeMailHtml } from './quarantine'
+import { AttachmentVerdicts } from './AttachmentVerdicts'
+import type { ReaderAttachmentRef } from './AttachmentVerdicts'
 import { allowSender, isSenderAllowed } from './allowlist'
 import '../mail-quarantine.css'
 import './reader.css'
@@ -29,6 +31,14 @@ export interface MessageReaderProps {
   security?: ReaderSecurity
   trustedDomains?: string[]
   onLinkOpen?: (url: string) => void
+  /**
+   * Receive-side quarantine verdicts (H5): when present, each inbound
+   * attachment renders its staged-temp --> scan --> store verdict row
+   * (preview for clean, confirm-gated save+open for quarantined, a
+   * non-rendered placeholder for blocked). Absent, the header keeps the
+   * plain attachments label.
+   */
+  attachments?: ReaderAttachmentRef[]
 }
 
 function escapeToHtml(text: string): string {
@@ -41,7 +51,8 @@ export function MessageReader({
   security,
   trustedDomains = [],
   onLinkOpen,
-}: MessageReaderProps) {
+  attachments,
+}: MessageReaderProps): ReactElement {
   const { t } = useI18n()
   const [body, setBody] = useState<MailBody | null>(null)
   const [loading, setLoading] = useState(false)
@@ -181,6 +192,9 @@ export function MessageReader({
         {envelope.hasAttach && (
           <div className="mail-reader-attachments">
             <span>{t('mail.reader.attachments')}</span>
+            {attachments !== undefined && attachments.length > 0 ? (
+              <AttachmentVerdicts attachments={attachments} />
+            ) : null}
           </div>
         )}
       </header>
