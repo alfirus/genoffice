@@ -166,6 +166,8 @@ vi.mock('../../html/src/main/html-main', () => ({
   createHtmlPresentView: (...args: unknown[]) => createHtmlPresentView(...(args as [])),
   htmlIsDirty: (...args: unknown[]) => htmlIsDirty(...(args as [])),
   requestHtmlClose: (...args: unknown[]) => requestHtmlClose(...(args as [])),
+}))
+
 const createMailView = vi.fn(() => makeFakeView())
 const mailIsDirty = vi.fn(() => false)
 const mailRefOf = vi.fn((): string | undefined => undefined)
@@ -1055,6 +1057,7 @@ describe('detach / attach (Open in New Window, tear-off, dock)', () => {
     expect(record.view.webContents.close).not.toHaveBeenCalled()
     expect(manager.list()).toHaveLength(1)
   })
+})
 describe('mail tabs', () => {
   it('opens a mail tab with the untitled mail title and routes the menu at it', () => {
     const id = manager.openMailTab()
