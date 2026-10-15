@@ -13,6 +13,7 @@ import {
   normalizeAiScope,
   registerAiRetrieveHandlers,
   resetAiRetrieveHandlers,
+  resetSharedAiRetrieveRateLimiter,
   stubRef,
   twoAccountStubSeeds,
 } from '../src/main/ai'
@@ -55,6 +56,7 @@ function makeBus(): {
 
 beforeEach(() => {
   resetAiRetrieveHandlers()
+  resetSharedAiRetrieveRateLimiter()
   resetMailDemoSeed()
   closeAllMailStores()
   resetMailStoreConfig()

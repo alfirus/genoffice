@@ -128,6 +128,49 @@ export function stubRef(folderId: string, uid: string): MailMessageRef {
   return { uid, folderId, threadId: `thread-${uid}` }
 }
 
+/** Ref helper carrying an exact-match account hint (D-H1-C3). */
+export function stubRefHinted(folderId: string, uid: string, accountId: string): MailMessageRef {
+  return { uid, folderId, threadId: `thread-${uid}`, accountId }
+}
+
+/**
+ * Same-uid two-account fixture for exact-match tests: both scope members
+ * hold `(inbox, dup1)` with disjoint synthetic mail, so resolution order
+ * and hint preference are observable.
+ */
+export function sameUidTwoAccountSeeds(): StubSeedAccount[] {
+  return [
+    {
+      accountId: 'stub-a',
+      messages: [
+        {
+          uid: 'dup1',
+          folderId: 'inbox',
+          from: ['billing@example.com'],
+          subject: 'Alpha invoice dup1',
+          snippet: 'Alpha copy of dup1.',
+          text: 'Alpha body for dup1, billing marker one.',
+          msgIdHeader: '<dup1-a@example.com>',
+        },
+      ],
+    },
+    {
+      accountId: 'stub-b',
+      messages: [
+        {
+          uid: 'dup1',
+          folderId: 'inbox',
+          from: ['clinic@example.net'],
+          subject: 'Beta reminder dup1',
+          snippet: 'Beta copy of dup1.',
+          text: 'Beta body for dup1, clinic marker two.',
+          msgIdHeader: '<dup1-b@example.net>',
+        },
+      ],
+    },
+  ]
+}
+
 /**
  * Deterministic stubbed stream: splits text into word-bounded delta chunks
  * plus a terminal done chunk, all echoing the request id. Lets transport
