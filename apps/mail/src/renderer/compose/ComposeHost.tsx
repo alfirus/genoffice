@@ -59,6 +59,17 @@ interface PendingAttachment {
   mime: string
   size: number
   data: Uint8Array
+  /**
+   * H5 quarantine pre-send scan (Q-7): staged → scanning → stored/blocked
+   * states stay visible per attachment. Absent when the quarantine bridge
+   * is unwired (unit tests, old preloads); the main process still
+   * enforces the scan at send time.
+   */
+  scan?: {
+    state: 'scanning' | 'clean' | 'quarantined' | 'blocked'
+    reason?: string
+    sizeWarn?: boolean
+  }
 }
 
 interface DraftSnapshot {
@@ -217,12 +228,16 @@ export function ComposeHost(props: ComposeHostProps): ReactElement {
     ccAddrs.every((addr) => EMAIL_RE.test(addr)) &&
     bccAddrs.every((addr) => EMAIL_RE.test(addr))
   const totalBytes = text.length + attachments.reduce((sum, att) => sum + att.size, 0)
+  const scanBlocked = attachments.some(
+    (att) => att.scan?.state === 'blocked' || att.scan?.state === 'scanning',
+  )
   const canSend =
     readOnly !== true &&
     accountId.length > 0 &&
     addressesValid &&
     subject.length <= MAX_SUBJECT_CHARS &&
-    text.length <= MAX_TEXT_CHARS
+    text.length <= MAX_TEXT_CHARS &&
+    !scanBlocked
   const showWarn = totalBytes > WARN_TOTAL_BYTES
   const showDriverHint = attachments.some((att) => att.size > STRICT_DRIVER_FILE_BYTES)
 
@@ -245,7 +260,42 @@ export function ComposeHost(props: ComposeHostProps): ReactElement {
       })
     }
     if (rejected) setRejectNotice(true)
-    if (picked.length > 0) setAttachments((current) => [...current, ...picked])
+    if (picked.length === 0) return
+    // H5 quarantine pre-send scan: mark rows scanning, then resolve each
+    // verdict through the main-process scan (no renderer-side parsing).
+    // Scan failures leave the row unscanned; compose-send re-scans anyway.
+    const bridge = typeof window !== 'undefined' ? window.mailQuarantine : undefined
+    if (bridge === undefined) {
+      setAttachments((current) => [...current, ...picked])
+      return
+    }
+    setAttachments((current) => [
+      ...current,
+      ...picked.map((att) => ({ ...att, scan: { state: 'scanning' as const } })),
+    ])
+    for (const att of picked) {
+      void bridge.scan(att.filename, att.mime, att.data).then(
+        (result) =>
+          setAttachments((current) =>
+            current.map((row) =>
+              row.key === att.key
+                ? {
+                    ...row,
+                    scan: {
+                      state: result.verdict,
+                      ...(result.reason !== 'clean' ? { reason: result.reason } : {}),
+                      sizeWarn: result.sizeWarn,
+                    },
+                  }
+                : row,
+            ),
+          ),
+        () =>
+          setAttachments((current) =>
+            current.map((row) => (row.key === att.key ? { ...row, scan: undefined } : row)),
+          ),
+      )
+    }
   }
 
   function onAttachChange(event: ChangeEvent<HTMLInputElement>): void {
@@ -397,6 +447,22 @@ export function ComposeHost(props: ComposeHostProps): ReactElement {
               <span className="mail-compose-attach-name">{att.filename}</span>
               {att.size > STRICT_DRIVER_FILE_BYTES ? (
                 <span className="mail-compose-attach-hint">{t('mail.compose.perDriverCap')}</span>
+              ) : null}
+              {att.scan?.state === 'scanning' ? (
+                <span className="mail-compose-attach-hint">
+                  {t('mail.compose.attachmentScanning', { name: att.filename })}
+                </span>
+              ) : null}
+              {att.scan?.state === 'quarantined' ? (
+                <span className="mail-compose-attach-hint">{t('mail.quarantine.quarantined')}</span>
+              ) : null}
+              {att.scan?.state === 'blocked' ? (
+                <span className="mail-compose-attach-hint">
+                  {t('mail.compose.attachmentBlocked', {
+                    name: att.filename,
+                    reason: att.scan.reason ?? 'suspicious-content',
+                  })}
+                </span>
               ) : null}
               <button
                 type="button"
