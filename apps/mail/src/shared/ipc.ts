@@ -204,7 +204,12 @@ export interface AiRetrieveRequest {
   folderId?: string
   /** Default 50, hard cap 200. */
   limit?: number
-  /** fetch-bodies / cite-resolve: explicit user-cited set, max 50. */
+  /**
+   * fetch-bodies / cite-resolve: explicit user-cited set, max 50. Each ref
+   * may carry the optional exact-match accountId hint (H1 D-H1-C3): the
+   * citation's scope account, resolved exactly there with loud failure on
+   * stale hints; absent means deterministic first-scope-match fallback.
+   */
   refs?: import('@genoffice/mail-protocols').MailMessageRef[]
 }
 
