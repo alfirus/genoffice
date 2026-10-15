@@ -25,6 +25,8 @@ import {
   composeStageAttachmentSchema,
 } from '../shared/compose-schemas'
 import { getMailStore } from './mail-store'
+import { resolveSendCaps, scanAttachmentPath, scanFileName } from './quarantine'
+import type { MailDriverKind } from './quarantine'
 
 // Compose + drafts main-process handlers (Lane C owns this file — never
 // edit `mail-main.ts`). Every handler validates with zod end-to-end before
@@ -69,6 +71,12 @@ export interface ComposeHandlerDeps {
   /** OS open for validated external URLs (shell.openExternal in prod). */
   openExternal: (url: string) => Promise<void> | void
   sendCaps?: ComposeSendCaps
+  /**
+   * Driver for per-driver cap resolution (H5 quarantine): when sendCaps is
+   * unset, the scan + send caps resolve for this driver (Q-5). Defaults to
+   * the IMAP/SMTP mirror, so unset behavior is unchanged.
+   */
+  driver?: MailDriverKind
   /** Draft persistence (defaults to the shared in-memory stub store). */
   saveDraft?: (accountId: string, threadKey: string, text: string) => void
   /** ISO clock for outbox entries (injectable for tests). */
@@ -116,6 +124,15 @@ function normalizeAttachments(
       continue
     }
     if (att.data instanceof Uint8Array) {
+      // H5 quarantine: the original renderer-supplied name is scanned
+      // BEFORE staging sanitizes it, so traversal/ADS tricks cannot wash
+      // through safeFilename into the send path.
+      const nameCheck = scanFileName(att.filename)
+      if (!nameCheck.ok) {
+        throw badRequest(
+          `attachment blocked (${nameCheck.reason ?? 'hostile-name'}): ${att.filename}`,
+        )
+      }
       const staged = stage({ filename: att.filename, mime: att.mime, bytes: att.data, stageDir })
       out.push({
         filename: staged.filename,
@@ -175,7 +192,11 @@ export function registerComposeHandlers(bus: ComposeIpcBus, deps: ComposeHandler
   if (busesRegistered.has(bus)) return
   busesRegistered.add(bus)
 
-  const caps = deps.sendCaps ?? DEFAULT_COMPOSE_SEND_CAPS
+  const scanCaps = deps.sendCaps ?? resolveSendCaps(deps.driver)
+  // Q-5: the send-path caps ARE the driver-resolved caps (explicit sendCaps
+  // still win). Unset driver resolves to the IMAP/SMTP mirror, so default
+  // behavior is unchanged.
+  const caps = scanCaps
   const clock = deps.clock ?? (() => new Date().toISOString())
   // Intent-recording stub ledger (Lane C shape; replay is the sync phase).
   const ledger: OutboxEntry[] = []
@@ -189,6 +210,20 @@ export function registerComposeHandlers(bus: ComposeIpcBus, deps: ComposeHandler
     const req = parsed.data
     if (countRecipients(req) > caps.maxRecipients) throw badRequest('too many recipients')
     const attachments = normalizeAttachments(req, deps.stage, deps.stageDir)
+    // H5 quarantine (Q-2/Q-4/Q-5): every staged attachment is scanned from
+    // disk before the provider call. Blocked hostile/suspicious verdicts
+    // (traversal, hostile names, EICAR-style vectors, executable magic,
+    // zip-bomb heuristics) reject the send; quarantined verdicts
+    // (executables, scripts, macros, MIME mismatch) still send but are
+    // never inline-previewed downstream. Over-cap scan verdicts fall
+    // through to the established caps checks below so the send-path error
+    // contract (per-account cap messages) stays byte-identical.
+    for (const att of attachments) {
+      const scanned = scanAttachmentPath(att.path, att.filename, att.mime, att.size, scanCaps)
+      if (scanned.verdict === 'blocked' && scanned.reason !== 'over-cap') {
+        throw badRequest(`attachment blocked (${scanned.reason}): ${scanned.filename}`)
+      }
+    }
     const total = req.text.length + attachments.reduce((sum, att) => sum + att.size, 0)
     if (total > caps.maxTotalBytes) throw badRequest('attachments exceed the size cap')
     for (const att of attachments) {
