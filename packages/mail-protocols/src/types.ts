@@ -19,6 +19,13 @@ export interface MailMessageRef {
   folderId: string
   msgIdHeader?: string
   threadId: string
+  /**
+   * Optional exact-match hint (H1 D-H1-C3, H4 implements): the scope
+   * account that produced the citation this ref was cited from. The
+   * retrieval core resolves exactly there and fails loud on stale hints;
+   * absent means deterministic first-scope-match fallback.
+   */
+  accountId?: string
 }
 
 export interface MailFlags {

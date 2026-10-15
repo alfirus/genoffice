@@ -56,7 +56,26 @@ function assertOfflineStatus(status: OfflineStatus): void {
 }
 
 // P5 AI retrieval (W owns): hand-rolled guard mirrors mailAiRetrieveSchema;
-// main re-validates with zod end-to-end.
+// main re-validates with zod end-to-end. H4 adds ref-shape checks incl the
+// optional exact-match accountId hint (stale hints fail loud in main).
+function assertAiRef(ref: MailMessageRef): void {
+  if (
+    !ref ||
+    typeof ref.uid !== 'string' ||
+    ref.uid.length < 1 ||
+    typeof ref.folderId !== 'string' ||
+    ref.folderId.length < 1
+  ) {
+    throw new Error('mail: bad ai-retrieve ref')
+  }
+  if (
+    ref.accountId !== undefined &&
+    (typeof ref.accountId !== 'string' || ref.accountId.length < 1 || ref.accountId.length > 256)
+  ) {
+    throw new Error('mail: bad ai-retrieve ref')
+  }
+}
+
 function assertAiRetrieve(req: AiRetrieveRequest): void {
   if (!req || typeof req !== 'object') throw new Error('mail: bad ai-retrieve request')
   const scope = req.scope
@@ -77,6 +96,12 @@ function assertAiRetrieve(req: AiRetrieveRequest): void {
   }
   if ((req.op === 'fetch-bodies' || req.op === 'cite-resolve') && !Array.isArray(req.refs)) {
     throw new Error('mail: fetch-bodies and cite-resolve require refs')
+  }
+  if (req.refs !== undefined) {
+    if (!Array.isArray(req.refs) || req.refs.length > 50) {
+      throw new Error('mail: bad ai-retrieve refs')
+    }
+    for (const ref of req.refs) assertAiRef(ref)
   }
   if (
     req.limit !== undefined &&

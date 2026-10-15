@@ -2,6 +2,8 @@ import type { MailEnvelope, MailMessageRef } from '@genoffice/mail-protocols'
 import { redactForPrompt } from '../sync/redact'
 import { normalizeAiScope } from './scope'
 import type { AiScope } from './scope'
+import { sharedAiRetrieveRateLimiter } from './rate-limit'
+import type { AiRateLimiter } from './rate-limit'
 
 /**
  * Retrieval core for the mail:ai-retrieve channel (P5 spec section 4).
@@ -67,6 +69,11 @@ export interface AiRetrieveDeps {
   knownAccountIds(): string[] | Promise<string[]>
   /** Per-account store; called only for scope members. */
   storeFor(accountId: string): AiRetrieveStorePort | Promise<AiRetrieveStorePort>
+  /**
+   * Abuse + cost guard (H1 P-9). Defaults to the shared per-account
+   * token bucket; tests inject a fake-clock limiter here.
+   */
+  rateLimiter?: AiRateLimiter
 }
 
 /** Default triage cap (FTS_DEFAULT_LIMIT, store.ts). */
@@ -89,7 +96,10 @@ function citationFor(accountId: string, env: MailEnvelope): AiCitation {
 /**
  * Run one scoped retrieval. Rejects unknown scope accounts before opening
  * any store; every op touches only scope members, so mail outside the
- * picker selection can never enter the response.
+ * picker selection can never enter the response. Each call is stateless
+ * (no server-side session): the renderer discards stale results via the
+ * echoed scope, so a newer picker selection simply supersedes in-flight
+ * calls — that echo check IS the query-cancellation contract (H6 seam).
  */
 export async function aiRetrieve(
   request: AiRetrieveRequest,
@@ -100,6 +110,7 @@ export async function aiRetrieve(
   for (const accountId of scope.accountIds) {
     if (!known.has(accountId)) throw badRequest('unknown account in AI scope')
   }
+  ;(deps.rateLimiter ?? sharedAiRetrieveRateLimiter()).check(scope.accountIds)
   const limit = Math.min(
     Math.max(Math.trunc(request.limit ?? AI_RETRIEVE_DEFAULT_LIMIT), 1),
     AI_RETRIEVE_MAX_LIMIT,
@@ -129,6 +140,40 @@ export async function aiRetrieve(
     const citations: AiCitation[] = []
     const bodies: AiBodyEntry[] = []
     for (const ref of refs) {
+      // D-H1-C3 exact-match preference: a ref may carry the accountId of
+      // the citation that produced it. A hint naming a scope member that
+      // holds the ref wins over scope order; unknown or stale hints fail
+      // loud instead of silently resolving another account's mail.
+      const hint = ref.accountId
+      if (hint !== undefined) {
+        if (!scope.accountIds.includes(hint)) {
+          throw badRequest('stale account hint in message ref')
+        }
+        const store = await deps.storeFor(hint)
+        const env = store.envelope(hint, ref.folderId, ref.uid)
+        if (!env) throw badRequest('stale account hint in message ref')
+        envelopes.push(env)
+        citations.push(citationFor(hint, env))
+        if (request.op === 'fetch-bodies') {
+          const text = store.body(hint, ref.folderId, ref.uid) ?? ''
+          bodies.push({ ref: env.ref, accountId: hint, text: redactForPrompt(text) })
+        } else {
+          // cite-resolve surfaces ambiguity: the hinted match first, then
+          // every other in-scope holder (all in-scope, so no leak).
+          for (const accountId of scope.accountIds) {
+            if (accountId === hint) continue
+            const other = await deps.storeFor(accountId)
+            const otherEnv = other.envelope(accountId, ref.folderId, ref.uid)
+            if (!otherEnv) continue
+            envelopes.push(otherEnv)
+            citations.push(citationFor(accountId, otherEnv))
+          }
+        }
+        continue
+      }
+      // No hint: deterministic first-scope-match fallback (scope order =
+      // picker order). fetch-bodies returns the single resolved body while
+      // cite-resolve returns every in-scope match.
       for (const accountId of scope.accountIds) {
         const store = await deps.storeFor(accountId)
         const env = store.envelope(accountId, ref.folderId, ref.uid)
@@ -138,8 +183,8 @@ export async function aiRetrieve(
         if (request.op === 'fetch-bodies') {
           const text = store.body(accountId, ref.folderId, ref.uid) ?? ''
           bodies.push({ ref: env.ref, accountId, text: redactForPrompt(text) })
+          break
         }
-        break
       }
     }
     const response: AiRetrieveResponse = { scope, envelopes, citations }
